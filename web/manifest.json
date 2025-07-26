@@ -1,0 +1,38 @@
+{
+    "name": "CareSync - Healthcare Management",
+    "short_name": "CareSync",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#2196F3",
+    "theme_color": "#2196F3",
+    "description": "Healthcare app for managing appointments, medications, and medical records across all devices.",
+    "orientation": "any",
+    "categories": ["health", "medical", "productivity"],
+    "lang": "en",
+    "scope": "/",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
