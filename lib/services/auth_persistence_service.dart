@@ -6,12 +6,13 @@ class AuthPersistenceService {
   static const String _keyUserEmail = 'user_email';
   static const String _keyUserId = 'user_id';
 
-  // Save login state
+  // Save login state with timestamp
   static Future<void> saveLoginState(User user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyIsLoggedIn, true);
     await prefs.setString(_keyUserEmail, user.email ?? '');
     await prefs.setString(_keyUserId, user.uid);
+    await prefs.setInt('login_timestamp', DateTime.now().millisecondsSinceEpoch);
   }
 
   // Clear login state
@@ -20,12 +21,15 @@ class AuthPersistenceService {
     await prefs.setBool(_keyIsLoggedIn, false);
     await prefs.remove(_keyUserEmail);
     await prefs.remove(_keyUserId);
+    await prefs.remove('login_timestamp');
   }
 
-  // Check if user is logged in
+  // Check if user is logged in (no expiration check)
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_keyIsLoggedIn) ?? false;
+    final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
+    // Always return the stored state without time-based expiration
+    return isLoggedIn;
   }
 
   // Get saved user data

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:finalapp/screens/appointments_management_screen.dart';
 import 'package:finalapp/screens/alarm_screen.dart';
 import 'package:finalapp/screens/family_records_screen.dart';
 import 'package:finalapp/screens/reports_screen.dart';
-import 'package:finalapp/screens/profile_screen.dart';
 import 'package:finalapp/screens/health_info_screen.dart';
 import 'package:finalapp/screens/medication_tracker_screen.dart';
 import 'package:finalapp/screens/doctor_consultation_screen.dart';
-import 'package:finalapp/screens/patient_management_screen.dart';
+import 'package:finalapp/navigation/navigation_controller.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/services/activity_tracking_service.dart';
+import 'package:finalapp/services/profile_service.dart';
+import 'package:finalapp/services/notification_service.dart';
+import 'package:finalapp/screens/notification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,8 +29,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
+
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  String _userName = 'User';
+  bool _isLoading = true;
+
+  List<Map<String, dynamic>> _recentMessages = [];
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+    _loadNotifications();
+  }
+
+  Future<void> _loadUserName() async {
+    try {
+      final userData = await ProfileService.getUserProfile();
+      setState(() {
+        _userName = userData?['name'] ?? 'User';
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading user name: $e');
+      setState(() {
+        _userName = 'User';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final results = await Future.wait([
+        NotificationService.getRecentMessages(limit: 5),
+        NotificationService.getUnreadCount(),
+      ]);
+      
+      setState(() {
+        _recentMessages = results[0] as List<Map<String, dynamic>>;
+        _unreadCount = results[1] as int;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading notifications: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +94,46 @@ class HomeContent extends StatelessWidget {
             elevation: 0,
             automaticallyImplyLeading: false,
             actions: [
-              TrackedIconButton(
-                buttonName: 'notifications',
-                screenName: 'home_screen',
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
+              Stack(
+                children: [
+                  TrackedIconButton(
+                    buttonName: 'notifications',
+                    screenName: 'home_screen',
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  if (_unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$_unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -86,9 +174,9 @@ class HomeContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Welcome Back, [User\'s Name]',
-                  style: TextStyle(
+                Text(
+                  _isLoading ? 'Welcome Back...' : 'Welcome Back, $_userName!',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -106,10 +194,11 @@ class HomeContent extends StatelessWidget {
                       buttonName: 'view_profile',
                       screenName: 'home_screen',
                       onPressed: () {
-                        Navigator.push(
+                        // Navigate to profile tab using Navigator replacement
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
+                            builder: (context) => const NavigationController(initialIndex: 6),
                           ),
                         );
                       },
@@ -162,26 +251,116 @@ class HomeContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Notification',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recent Messages',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$_unreadCount new',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
+        _recentMessages.isEmpty
+            ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Text(
+                  'No recent messages',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+            : Column(
+                children: _recentMessages.take(3).map((message) {
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      border: message['is_read'] == false
+                          ? Border.all(color: Colors.blue, width: 2)
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          message['subject'] ?? 'No Subject',
+                          style: TextStyle(
+                            fontWeight: message['is_read'] == false
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          message['content'] ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+        if (_recentMessages.isNotEmpty)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationScreen(),
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: const Text(
+                'View all messages →',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
-          child: const Text('Recent Messages'),
-        ),
       ],
     );
   }
+
+
+
+
 
   Widget _buildApplicationsSection(BuildContext context) {
     return Column(
@@ -258,14 +437,6 @@ class HomeContent extends StatelessWidget {
                 );
               },
             ),
-            // Hospital option removed as requested
-            _buildAppCard(
-              title: 'Medical Certificates',
-              icon: Icons.shield,
-              color: Colors.orange[100]!,
-              iconColor: Colors.orange,
-              onTap: () {},
-            ),
             _buildAppCard(
               title: 'Medication Tracker',
               icon: Icons.medication,
@@ -290,20 +461,6 @@ class HomeContent extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const DoctorConsultationScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildAppCard(
-              title: 'Patient Management',
-              icon: Icons.people,
-              color: Colors.purple[100]!,
-              iconColor: Colors.purple,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PatientManagementScreen(),
                   ),
                 );
               },

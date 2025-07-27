@@ -83,7 +83,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
           );
         },
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Add new alarm
@@ -216,34 +216,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: 0,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.business_center),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle, size: 40),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.menu),
-          label: '',
-        ),
-      ],
-    );
-  }
+
 
   void _showAddAlarmDialog() {
     _showMedicationDialog();

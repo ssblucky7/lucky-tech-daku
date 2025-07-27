@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:finalapp/screens/login_screen.dart';
 import 'package:finalapp/services/firebase_service.dart';
+import 'package:finalapp/services/profile_service.dart';
+import 'package:finalapp/widgets/tracked_screen.dart';
+import 'package:finalapp/widgets/tracked_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,53 +16,63 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock user data
-  final Map<String, dynamic> _userData = {
-    'name': 'Username',
-    'id': 'oadoia098iu',
-    'email': 'user@example.com',
-    'registeredHospitals': 4,
-    'familyRecords': 3,
-    'profileImage': null, // Will be null for now
-  };
+  Map<String, dynamic>? _userData;
+  Map<String, int> _statistics = {};
+  List<Map<String, dynamic>> _medicalHistory = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final results = await Future.wait([
+        ProfileService.getUserProfile(),
+        ProfileService.getUserStatistics(),
+        ProfileService.getMedicalHistory(),
+      ]);
+      
+      setState(() {
+        _userData = results[0] as Map<String, dynamic>?;
+        _statistics = results[1] as Map<String, int>;
+        _medicalHistory = results[2] as List<Map<String, dynamic>>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AppBar(
-          title: const Text('Profile'),
-          automaticallyImplyLeading: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const UserDetailsScreen()),
-                );
-              },
+    return TrackedScreen(
+      screenName: 'profile_screen',
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadUserData,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildProfileHeader(),
+                    const SizedBox(height: 20),
+                    _buildQuickStats(),
+                    const SizedBox(height: 20),
+                    _buildProfileOptions(),
+                  ],
+                ),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildProfileHeader(),
-                const SizedBox(height: 20),
-                _buildQuickStats(),
-                const SizedBox(height: 20),
-                _buildProfileOptions(),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -87,13 +102,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey.shade300, width: 1),
             ),
-            child: _userData['profileImage'] != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: Image.network(
-                      _userData['profileImage'],
-                      fit: BoxFit.cover,
-                    ),
+            child: _userData != null
+                ? const Icon(
+                    Icons.person,
+                    size: 50,
+                    color: Colors.grey,
                   )
                 : const Icon(
                     Icons.person,
@@ -107,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Name: ${_userData['name']}',
+                  _userData?['name'] ?? 'No Name',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -115,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'ID: ${_userData['id']}',
+                  _userData?['email'] ?? 'No Email',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -124,9 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _buildStatItem('Registered Hospital', _userData['registeredHospitals'].toString()),
-                    const SizedBox(width: 15),
-                    _buildStatItem('Family Records', _userData['familyRecords'].toString()),
+                    _buildStatItem('History', _medicalHistory.length.toString()),
+                    const SizedBox(width: 8),
+                    _buildStatItem('Verified', _userData?['is_email_verified'] == true ? 'Yes' : 'No'),
                   ],
                 ),
               ],
@@ -142,30 +155,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatItem(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.blue[700],
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.blue[700],
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue[700],
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue[700],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -189,9 +205,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatColumn('Appointments', '12', Icons.calendar_today, Colors.blue),
-          _buildStatColumn('Medications', '5', Icons.medication, Colors.green),
-          _buildStatColumn('Reports', '8', Icons.description, Colors.orange),
+          _buildStatColumn('Appointments', (_statistics['appointments'] ?? 0).toString(), Icons.calendar_today, Colors.blue),
+          _buildStatColumn('Medications', (_statistics['medications'] ?? 0).toString(), Icons.medication, Colors.green),
+          _buildStatColumn('Reports', (_statistics['reports'] ?? 0).toString(), Icons.description, Colors.orange),
         ],
       ),
     );
@@ -241,11 +257,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _buildOptionItem(
           'Medical History',
           Icons.history,
-          () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Medical History feature coming soon')),
-            );
-          },
+          () => _showMedicalHistoryScreen(),
         ),
         _buildOptionItem(
           'Settings',
@@ -277,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _showEmailVerificationDialog();
           },
           trailing: Icon(
-            _userData['email'].contains('@') ? Icons.check_circle : Icons.warning,
-            color: _userData['email'].contains('@') ? Colors.green : Colors.orange,
+            _userData?['is_email_verified'] == true ? Icons.check_circle : Icons.warning,
+            color: _userData?['is_email_verified'] == true ? Colors.green : Colors.orange,
           ),
         ),
         _buildOptionItem(
@@ -293,12 +305,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 30),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ElevatedButton.icon(
+          child: TrackedButton(
+            buttonName: 'logout_button',
+            screenName: 'profile_screen',
             onPressed: () {
               _showLogoutDialog();
             },
-            icon: const Icon(Icons.logout),
-            label: const Text('Log out'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -306,6 +318,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),
               ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.logout),
+                SizedBox(width: 8),
+                Text('Log out'),
+              ],
             ),
           ),
         ),
@@ -360,6 +380,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+
+
+
+
+
+
+
+
+  void _showMedicalHistoryScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MedicalHistoryScreen(
+          medicalHistory: _medicalHistory,
+          onRefresh: _loadUserData,
+        ),
+      ),
+    );
+  }
+
   void _showEmailVerificationDialog() {
     showDialog(
       context: context,
@@ -368,9 +408,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Current email: ${_userData['email']}'),
+            Text('Current email: ${_userData?['email'] ?? 'No email'}'),
             const SizedBox(height: 16),
-            const Text('Would you like to verify your email address?'),
+            Text(
+              _userData?['is_email_verified'] == true
+                  ? 'Your email is already verified!'
+                  : 'Would you like to verify your email address?',
+            ),
           ],
         ),
         actions: [
@@ -378,15 +422,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Verification email sent!')),
-              );
-            },
-            child: const Text('Send Verification'),
-          ),
+          if (_userData?['is_email_verified'] != true)
+            TrackedButton(
+              buttonName: 'send_verification',
+              screenName: 'email_verification_dialog',
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  await ProfileService.sendEmailVerification();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Verification email sent!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to send verification: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Send Verification'),
+            ),
         ],
       ),
     );
@@ -403,7 +467,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          TrackedButton(
+            buttonName: 'confirm_logout',
+            screenName: 'logout_dialog',
             onPressed: () async {
               Navigator.pop(context);
               await FirebaseService.signOut();
@@ -458,6 +524,453 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+class MedicalHistoryScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> medicalHistory;
+  final VoidCallback onRefresh;
+
+  const MedicalHistoryScreen({
+    super.key,
+    required this.medicalHistory,
+    required this.onRefresh,
+  });
+
+  @override
+  State<MedicalHistoryScreen> createState() => _MedicalHistoryScreenState();
+}
+
+class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Medical History'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _showAddHistoryDialog,
+          ),
+        ],
+      ),
+      body: widget.medicalHistory.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 80, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No medical history records'),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: widget.medicalHistory.length,
+              itemBuilder: (context, index) {
+                final history = widget.medicalHistory[index];
+                return _buildHistoryCard(history);
+              },
+            ),
+    );
+  }
+
+  Widget _buildHistoryCard(Map<String, dynamic> history) {
+    final date = (history['date'] as dynamic);
+    final dateStr = date != null ? DateFormat('MMM dd, yyyy').format(date.toDate()) : 'No date';
+
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: ListTile(
+        title: Text(history['title'] ?? 'No title'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(dateStr),
+            if (history['doctor_name']?.isNotEmpty == true)
+              Text('Dr. ${history['doctor_name']}'),
+            if (history['description']?.isNotEmpty == true)
+              Text(history['description']),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) => _handleHistoryAction(value, history),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'view',
+              child: Row(
+                children: [
+                  Icon(Icons.visibility, size: 16),
+                  SizedBox(width: 8),
+                  Text('View'),
+                ],
+              ),
+            ),
+            if (history['document_url'] != null)
+              const PopupMenuItem(
+                value: 'document',
+                child: Row(
+                  children: [
+                    Icon(Icons.attach_file, size: 16),
+                    SizedBox(width: 8),
+                    Text('View Document'),
+                  ],
+                ),
+              ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, size: 16, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddHistoryDialog() {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final doctorController = TextEditingController();
+    final hospitalController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    PlatformFile? document;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Medical History'),
+          content: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: doctorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Doctor Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: hospitalController,
+                    decoration: const InputDecoration(
+                      labelText: 'Hospital Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Date'),
+                    subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedDate = picked);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          document != null ? Icons.check_circle : Icons.attach_file,
+                          size: 48,
+                          color: document != null ? Colors.green : Colors.grey,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          document != null 
+                              ? 'Document: ${document!.name}'
+                              : 'No document',
+                          style: TextStyle(
+                            color: document != null ? Colors.green : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                type: FileType.any,
+                                allowMultiple: false,
+                              );
+                              
+                              if (result != null && result.files.isNotEmpty) {
+                                setDialogState(() {
+                                  document = result.files.first;
+                                });
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error selecting file: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.attach_file),
+                          label: const Text('Add Document'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TrackedButton(
+              buttonName: 'add_medical_history',
+              screenName: 'add_history_dialog',
+              onPressed: () async {
+                if (titleController.text.isNotEmpty) {
+                  if (!mounted) return;
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  
+                  try {
+                    await ProfileService.addMedicalHistory(
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      date: selectedDate,
+                      doctorName: doctorController.text,
+                      hospitalName: hospitalController.text,
+                      document: document,
+                    );
+                    
+                    widget.onRefresh();
+                    
+                    navigator.pop();
+                    
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Medical history added successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add medical history: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleHistoryAction(String action, Map<String, dynamic> history) async {
+    switch (action) {
+      case 'view':
+        _showHistoryDetails(history);
+        break;
+      case 'document':
+        if (history['document_url'] != null) {
+          _showDocument(history);
+        }
+        break;
+      case 'delete':
+        await _deleteHistory(history['id']);
+        break;
+    }
+  }
+
+  void _showHistoryDetails(Map<String, dynamic> history) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(history['title'] ?? 'Medical History'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (history['description']?.isNotEmpty == true) ...[
+                const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(history['description']),
+                const SizedBox(height: 8),
+              ],
+              if (history['doctor_name']?.isNotEmpty == true) ...[
+                const Text('Doctor:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(history['doctor_name']),
+                const SizedBox(height: 8),
+              ],
+              if (history['hospital_name']?.isNotEmpty == true) ...[
+                const Text('Hospital:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(history['hospital_name']),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDocument(Map<String, dynamic> history) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Document - ${history['title']}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Expanded(
+                child: Center(
+                  child: Image.network(
+                    history['document_url'],
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          SizedBox(height: 16),
+                          Text('Failed to load document'),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteHistory(String historyId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Medical History'),
+        content: const Text('Are you sure you want to delete this medical history record?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TrackedButton(
+            buttonName: 'confirm_delete_history',
+            screenName: 'delete_dialog',
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ProfileService.deleteMedicalHistory(historyId);
+        widget.onRefresh();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Medical history deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting medical history: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+}
+
 class UserDetailsScreen extends StatefulWidget {
   const UserDetailsScreen({super.key});
 
@@ -466,19 +979,59 @@ class UserDetailsScreen extends StatefulWidget {
 }
 
 class _UserDetailsScreenState extends State<UserDetailsScreen> {
-  final _usernameController = TextEditingController(text: 'Username');
-  final _emailController = TextEditingController(text: 'user@example.com');
-  final _dobController = TextEditingController(text: '01/01/1990');
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _emergencyController = TextEditingController();
   String _gender = 'Male';
   String _bloodGroup = 'O+';
-  final _contactController = TextEditingController(text: '+1234567890');
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await ProfileService.getUserProfile();
+      if (userData != null) {
+        setState(() {
+          // _userData = userData;
+          _usernameController.text = userData['name'] ?? '';
+          _emailController.text = userData['email'] ?? '';
+          _dobController.text = userData['date_of_birth'] ?? '';
+          _phoneController.text = userData['phone'] ?? '';
+          _addressController.text = userData['address'] ?? '';
+          _emergencyController.text = userData['emergency_contact'] ?? '';
+          _gender = userData['gender'] ?? 'Male';
+          _bloodGroup = userData['blood_group'] ?? 'O+';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
     _dobController.dispose();
-    _contactController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _emergencyController.dispose();
     super.dispose();
   }
 
@@ -498,57 +1051,114 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTextField('Username:', _usernameController),
-            const SizedBox(height: 16),
-            _buildDateField('DOB:', _dobController),
-            const SizedBox(height: 16),
-            _buildTextField('Email:', _emailController),
-            const SizedBox(height: 16),
-            _buildDropdownField('Gender:', _gender, ['Male', 'Female', 'Other'], (value) {
-              setState(() {
-                _gender = value!;
-              });
-            }),
-            const SizedBox(height: 16),
-            _buildDropdownField(
-                'Blood group:', _bloodGroup, ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-                (value) {
-              setState(() {
-                _bloodGroup = value!;
-              });
-            }),
-            const SizedBox(height: 16),
-            _buildTextField('Contact no:', _contactController),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () {
-                // Save user details
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Details saved successfully')),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTextField('Name:', _usernameController),
+                  const SizedBox(height: 16),
+                  _buildTextField('Email:', _emailController),
+                  const SizedBox(height: 16),
+                  _buildDateField('Date of Birth:', _dobController),
+                  const SizedBox(height: 16),
+                  _buildDropdownField('Gender:', _gender, ['Male', 'Female', 'Other'], (value) {
+                    setState(() {
+                      _gender = value!;
+                    });
+                  }),
+                  const SizedBox(height: 16),
+                  _buildDropdownField(
+                      'Blood Group:', _bloodGroup, ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+                      (value) {
+                    setState(() {
+                      _bloodGroup = value!;
+                    });
+                  }),
+                  const SizedBox(height: 16),
+                  _buildTextField('Phone:', _phoneController),
+                  const SizedBox(height: 16),
+                  _buildTextField('Address:', _addressController, maxLines: 3),
+                  const SizedBox(height: 16),
+                  _buildTextField('Emergency Contact:', _emergencyController),
+                  const SizedBox(height: 30),
+                  TrackedButton(
+                    buttonName: 'save_profile',
+                    screenName: 'user_details_screen',
+                    onPressed: _saveUserDetails,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const Text('Save Changes'),
+                  ),
+                ],
               ),
-              child: const Text('Save Changes'),
             ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Future<void> _saveUserDetails() async {
+    if (_usernameController.text.isEmpty || _emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Name and email are required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await ProfileService.createOrUpdateProfile(
+        name: _usernameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        dateOfBirth: _dobController.text,
+        gender: _gender,
+        bloodGroup: _bloodGroup,
+        address: _addressController.text,
+        emergencyContact: _emergencyController.text,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        Navigator.pop(context); // Close screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -559,6 +1169,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          maxLines: maxLines,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -651,8 +1262,21 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
 }
 
-class SupportScreen extends StatelessWidget {
+class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
+
+  @override
+  State<SupportScreen> createState() => _SupportScreenState();
+}
+
+class _SupportScreenState extends State<SupportScreen> {
+  final _feedbackController = TextEditingController();
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

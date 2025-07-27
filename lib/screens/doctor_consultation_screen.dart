@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:finalapp/services/doctor_consultation_service.dart';
+import 'package:finalapp/widgets/tracked_screen.dart';
+import 'package:finalapp/widgets/tracked_button.dart';
 
 class DoctorConsultationScreen extends StatefulWidget {
   const DoctorConsultationScreen({super.key});
@@ -11,17 +18,17 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> wit
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  List<Doctor> _doctors = [];
-  List<Doctor> _filteredDoctors = [];
-  List<Consultation> _upcomingConsultations = [];
-  List<Consultation> _pastConsultations = [];
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _doctors = [];
+  List<Map<String, dynamic>> _filteredDoctors = [];
+  List<Map<String, dynamic>> _upcomingConsultations = [];
+  List<Map<String, dynamic>> _pastConsultations = [];
   
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadMockData();
-    _filteredDoctors = _doctors;
+    _loadData();
     
     _searchController.addListener(() {
       _filterDoctors(_searchController.text);
@@ -35,140 +42,31 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> wit
     super.dispose();
   }
 
-  void _loadMockData() {
-    // Mock doctors data
-    _doctors = [
-      Doctor(
-        id: '1',
-        name: 'Dr. Sarah Johnson',
-        specialty: 'Cardiologist',
-        hospital: 'City Heart Hospital',
-        rating: 4.8,
-        experience: 12,
-        consultationFee: 150,
-        availability: ['Mon', 'Wed', 'Fri'],
-        imageUrl: 'assets/images/doctor1.jpg',
-        about: 'Dr. Sarah Johnson is a board-certified cardiologist with over 12 years of experience in treating heart conditions. She specializes in preventive cardiology and heart failure management.',
-      ),
-      Doctor(
-        id: '2',
-        name: 'Dr. Michael Chen',
-        specialty: 'Neurologist',
-        hospital: 'Central Neurology Center',
-        rating: 4.7,
-        experience: 15,
-        consultationFee: 180,
-        availability: ['Tue', 'Thu', 'Sat'],
-        imageUrl: 'assets/images/doctor2.jpg',
-        about: 'Dr. Michael Chen is a neurologist specializing in stroke prevention and treatment. He has conducted extensive research in neurological disorders and is committed to providing personalized care.',
-      ),
-      Doctor(
-        id: '3',
-        name: 'Dr. Emily Rodriguez',
-        specialty: 'Pediatrician',
-        hospital: 'Children\'s Wellness Center',
-        rating: 4.9,
-        experience: 10,
-        consultationFee: 120,
-        availability: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-        imageUrl: 'assets/images/doctor3.jpg',
-        about: 'Dr. Emily Rodriguez is a compassionate pediatrician dedicated to children\'s health. She focuses on developmental pediatrics and preventive care for children of all ages.',
-      ),
-      Doctor(
-        id: '4',
-        name: 'Dr. James Wilson',
-        specialty: 'Orthopedic Surgeon',
-        hospital: 'Advanced Orthopedic Institute',
-        rating: 4.6,
-        experience: 18,
-        consultationFee: 200,
-        availability: ['Mon', 'Wed', 'Fri'],
-        imageUrl: 'assets/images/doctor4.jpg',
-        about: 'Dr. James Wilson is an orthopedic surgeon specializing in sports medicine and joint replacement. He has worked with professional athletes and uses the latest minimally invasive techniques.',
-      ),
-      Doctor(
-        id: '5',
-        name: 'Dr. Aisha Patel',
-        specialty: 'Dermatologist',
-        hospital: 'Skin & Wellness Clinic',
-        rating: 4.7,
-        experience: 8,
-        consultationFee: 160,
-        availability: ['Tue', 'Thu', 'Sat'],
-        imageUrl: 'assets/images/doctor5.jpg',
-        about: 'Dr. Aisha Patel is a dermatologist specializing in medical and cosmetic dermatology. She is known for her expertise in treating complex skin conditions and her holistic approach to skin health.',
-      ),
-      Doctor(
-        id: '6',
-        name: 'Dr. Robert Kim',
-        specialty: 'Psychiatrist',
-        hospital: 'Mental Wellness Center',
-        rating: 4.8,
-        experience: 14,
-        consultationFee: 170,
-        availability: ['Mon', 'Wed', 'Fri'],
-        imageUrl: 'assets/images/doctor6.jpg',
-        about: 'Dr. Robert Kim is a psychiatrist with expertise in mood disorders and anxiety. He combines medication management with therapeutic approaches to provide comprehensive mental health care.',
-      ),
-    ];
-
-    // Mock consultations data
-    _upcomingConsultations = [
-      Consultation(
-        id: '101',
-        doctor: _doctors[0],
-        dateTime: DateTime.now().add(const Duration(days: 2, hours: 10)),
-        type: ConsultationType.video,
-        status: ConsultationStatus.confirmed,
-        symptoms: ['Chest pain', 'Shortness of breath'],
-        notes: 'Follow-up appointment after medication change',
-      ),
-      Consultation(
-        id: '102',
-        doctor: _doctors[2],
-        dateTime: DateTime.now().add(const Duration(days: 5, hours: 14)),
-        type: ConsultationType.inPerson,
-        status: ConsultationStatus.pending,
-        symptoms: ['Fever', 'Cough'],
-        notes: 'Annual check-up',
-      ),
-    ];
-
-    _pastConsultations = [
-      Consultation(
-        id: '103',
-        doctor: _doctors[1],
-        dateTime: DateTime.now().subtract(const Duration(days: 10, hours: 11)),
-        type: ConsultationType.video,
-        status: ConsultationStatus.completed,
-        symptoms: ['Headache', 'Dizziness'],
-        notes: 'Prescribed medication for migraines',
-        prescription: 'Sumatriptan 50mg, take as needed for migraine',
-        followUpDate: DateTime.now().add(const Duration(days: 30)),
-      ),
-      Consultation(
-        id: '104',
-        doctor: _doctors[3],
-        dateTime: DateTime.now().subtract(const Duration(days: 30, hours: 15)),
-        type: ConsultationType.inPerson,
-        status: ConsultationStatus.completed,
-        symptoms: ['Knee pain', 'Swelling'],
-        notes: 'MRI recommended for left knee',
-        prescription: 'Ibuprofen 600mg, twice daily for 7 days',
-        followUpDate: DateTime.now().add(const Duration(days: 14)),
-      ),
-      Consultation(
-        id: '105',
-        doctor: _doctors[4],
-        dateTime: DateTime.now().subtract(const Duration(days: 45, hours: 9)),
-        type: ConsultationType.video,
-        status: ConsultationStatus.completed,
-        symptoms: ['Rash', 'Itching'],
-        notes: 'Allergic reaction to new soap',
-        prescription: 'Hydrocortisone cream 1%, apply twice daily',
-        followUpDate: DateTime.now().subtract(const Duration(days: 15)),
-      ),
-    ];
+  Future<void> _loadData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final results = await Future.wait([
+        DoctorConsultationService.getDoctors(),
+        DoctorConsultationService.getUpcomingConsultations(),
+        DoctorConsultationService.getPastConsultations(),
+      ]);
+      
+      setState(() {
+        _doctors = results[0];
+        _filteredDoctors = results[0];
+        _upcomingConsultations = results[1];
+        _pastConsultations = results[2];
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error loading data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _filterDoctors(String query) {
@@ -178,126 +76,92 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> wit
       } else {
         _filteredDoctors = _doctors
             .where((doctor) =>
-                doctor.name.toLowerCase().contains(query.toLowerCase()) ||
-                doctor.specialty.toLowerCase().contains(query.toLowerCase()) ||
-                doctor.hospital.toLowerCase().contains(query.toLowerCase()))
+                doctor['name'].toString().toLowerCase().contains(query.toLowerCase()) ||
+                doctor['specialty'].toString().toLowerCase().contains(query.toLowerCase()) ||
+                doctor['hospital'].toString().toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
   }
 
-  void _showDoctorDetails(Doctor doctor) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DoctorDetailsSheet(doctor: doctor),
-    );
-  }
-
-  void _showConsultationDetails(Consultation consultation) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => ConsultationDetailsSheet(consultation: consultation),
-    );
-  }
-
-  void _showBookConsultationForm(Doctor doctor) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => BookConsultationForm(doctor: doctor),
-    );
-  }
-
-  void _showFilterOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => FilterOptionsSheet(
-        onApplyFilters: (String? specialty, double? minRating, int? minExperience) {
-          setState(() {
-            _filteredDoctors = _doctors.where((doctor) {
-              bool specialtyMatch = specialty == null || doctor.specialty == specialty;
-              bool ratingMatch = minRating == null || doctor.rating >= minRating;
-              bool experienceMatch = minExperience == null || doctor.experience >= minExperience;
-              return specialtyMatch && ratingMatch && experienceMatch;
-            }).toList();
-          });
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  hintText: 'Search doctors...',
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(color: Colors.white),
-                autofocus: true,
-              )
-            : const Text('Doctor Consultation'),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchController.clear();
-                  _filteredDoctors = _doctors;
-                }
-              });
-            },
+    return TrackedScreen(
+      screenName: 'doctor_consultation_screen',
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterOptions,
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Find Doctors'),
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
+          title: _isSearching
+              ? TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search doctors...',
+                    border: InputBorder.none,
+                  ),
+                  autofocus: true,
+                )
+              : const Text('Doctor Consultation'),
+          actions: [
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                    _filteredDoctors = _doctors;
+                  }
+                });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              onPressed: _showFilterOptions,
+            ),
           ],
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Find Doctors'),
+              Tab(text: 'Upcoming'),
+              Tab(text: 'Past'),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildDoctorsList(),
-          _buildConsultationsList(_upcomingConsultations),
-          _buildConsultationsList(_pastConsultations),
-        ],
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: _buildDoctorsList(),
+                  ),
+                  RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: _buildConsultationsList(_upcomingConsultations, true),
+                  ),
+                  RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: _buildConsultationsList(_pastConsultations, false),
+                  ),
+                ],
+              ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddDoctorDialog,
+          backgroundColor: Colors.blue,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
 
   Widget _buildDoctorsList() {
     if (_filteredDoctors.isEmpty) {
-      return const Center(
-        child: Text('No doctors found matching your criteria'),
-      );
+      return _buildEmptyState('No doctors found', Icons.medical_services);
     }
     
     return ListView.builder(
@@ -305,19 +169,16 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> wit
       itemCount: _filteredDoctors.length,
       itemBuilder: (context, index) {
         final doctor = _filteredDoctors[index];
-        return DoctorCard(
-          doctor: doctor,
-          onTap: () => _showDoctorDetails(doctor),
-          onBookAppointment: () => _showBookConsultationForm(doctor),
-        );
+        return _buildDoctorCard(doctor);
       },
     );
   }
 
-  Widget _buildConsultationsList(List<Consultation> consultations) {
+  Widget _buildConsultationsList(List<Map<String, dynamic>> consultations, bool isUpcoming) {
     if (consultations.isEmpty) {
-      return const Center(
-        child: Text('No consultations found'),
+      return _buildEmptyState(
+        isUpcoming ? 'No upcoming consultations' : 'No past consultations',
+        Icons.event_note,
       );
     }
     
@@ -326,281 +187,302 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> wit
       itemCount: consultations.length,
       itemBuilder: (context, index) {
         final consultation = consultations[index];
-        return ConsultationCard(
-          consultation: consultation,
-          onTap: () => _showConsultationDetails(consultation),
-          onReschedule: () => setState(() {}),
-        );
+        return _buildConsultationCard(consultation, isUpcoming);
       },
     );
   }
-}
 
-class DoctorCard extends StatelessWidget {
-  final Doctor doctor;
-  final VoidCallback onTap;
-  final VoidCallback onBookAppointment;
-
-  const DoctorCard({
-    super.key,
-    required this.doctor,
-    required this.onTap,
-    required this.onBookAppointment,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.blue.shade100,
-                    child: Text(
-                      doctor.name.substring(0, 2),
-                      style: TextStyle(color: Colors.blue.shade800),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          doctor.name,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          doctor.specialty,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          doctor.hospital,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              doctor.rating.toString(),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.work, color: Colors.blue, size: 16),
-                            const SizedBox(width: 4),
-                            Text('${doctor.experience} years'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '\$${doctor.consultationFee} per visit',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  ElevatedButton(
-                    onPressed: onBookAppointment,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Book Appointment'),
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 80, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
-        ),
+          const SizedBox(height: 24),
+          TrackedButton(
+            buttonName: 'add_doctor',
+            screenName: 'doctor_consultation_screen',
+            onPressed: _showAddDoctorDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add),
+                SizedBox(width: 8),
+                Text('Add Doctor'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class ConsultationCard extends StatelessWidget {
-  final Consultation consultation;
-  final VoidCallback onTap;
-  final VoidCallback? onReschedule;
-
-  const ConsultationCard({
-    super.key,
-    required this.consultation,
-    required this.onTap,
-    this.onReschedule,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDoctorCard(Map<String, dynamic> doctor) {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Colors.blue.shade100,
-                    child: Text(
-                      consultation.doctor.name.substring(0, 2),
-                      style: TextStyle(color: Colors.blue.shade800),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          consultation.doctor.name,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          consultation.doctor.specialty,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildStatusChip(consultation.status),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Icon(
-                    consultation.type == ConsultationType.video
-                        ? Icons.videocam
-                        : Icons.person,
-                    color: Colors.blue,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    consultation.type == ConsultationType.video
-                        ? 'Video Consultation'
-                        : 'In-Person Visit',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.calendar_today, color: Colors.blue, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDateTime(consultation.dateTime),
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (consultation.symptoms.isNotEmpty) ...[  
-                const Text(
-                  'Symptoms:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.blue.shade100,
+                  backgroundImage: doctor['profile_image_url'] != null
+                      ? NetworkImage(doctor['profile_image_url'])
+                      : null,
+                  child: doctor['profile_image_url'] == null
+                      ? Text(
+                          doctor['name'].toString().substring(0, 2).toUpperCase(),
+                          style: TextStyle(color: Colors.blue.shade800),
+                        )
+                      : null,
                 ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 8,
-                  children: consultation.symptoms.map((symptom) {
-                    return Chip(
-                      label: Text(symptom, style: const TextStyle(fontSize: 12)),
-                      backgroundColor: Colors.grey[200],
-                      padding: const EdgeInsets.all(0),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    );
-                  }).toList(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doctor['name'],
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        doctor['specialty'],
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        doctor['hospital'],
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            doctor['rating'].toString(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 16),
+                          Icon(Icons.work, color: Colors.blue, size: 16),
+                          const SizedBox(width: 4),
+                          Text('${doctor['experience']} years'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
-              if (consultation.status == ConsultationStatus.confirmed) ...[  
-                const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '\$${doctor['consultation_fee']} per visit',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
-                      onPressed: () {
-                        // Cancel appointment logic
-                      },
-                      child: const Text('Cancel'),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => _showDoctorDetails(doctor),
+                        child: const Text('View Details'),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        _showRescheduleDialog(context, consultation, onReschedule);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                    Expanded(
+                      child: TrackedButton(
+                        buttonName: 'book_appointment',
+                        screenName: 'doctor_consultation_screen',
+                        onPressed: () => _showBookConsultationForm(doctor),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text('Book'),
                       ),
-                      child: const Text('Reschedule'),
                     ),
                   ],
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(ConsultationStatus status) {
+  Widget _buildConsultationCard(Map<String, dynamic> consultation, bool isUpcoming) {
+    final dateTime = (consultation['date_time'] as Timestamp).toDate();
+    final symptoms = List<String>.from(consultation['symptoms'] ?? []);
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: Colors.blue.shade100,
+                  child: Text(
+                    'Dr',
+                    style: TextStyle(color: Colors.blue.shade800),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Doctor ID: ${consultation['doctor_id']}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        consultation['consultation_type'] == 'video' ? 'Video Consultation' : 'In-Person Visit',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildStatusChip(consultation['status']),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.blue, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  DateFormat('MMM dd, yyyy HH:mm').format(dateTime),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (symptoms.isNotEmpty) ...[
+              const Text(
+                'Symptoms:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                children: symptoms.map((symptom) {
+                  return Chip(
+                    label: Text(symptom, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: Colors.grey[200],
+                    padding: const EdgeInsets.all(0),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  );
+                }).toList(),
+              ),
+            ],
+            if (consultation['medical_document_url'] != null) ...[
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => _showMedicalDocument(consultation),
+                icon: const Icon(Icons.attach_file, size: 16),
+                label: const Text('View Medical Document'),
+                style: TextButton.styleFrom(foregroundColor: Colors.blue),
+              ),
+            ],
+            if (isUpcoming && consultation['status'] != 'cancelled') ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => _cancelConsultation(consultation['id']),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  TrackedButton(
+                    buttonName: 'reschedule_consultation',
+                    screenName: 'doctor_consultation_screen',
+                    onPressed: () => _showRescheduleDialog(consultation),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Reschedule'),
+                  ),
+                ],
+              ),
+            ],
+            if (!isUpcoming) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => _deleteConsultation(consultation['id']),
+                    color: Colors.red,
+                    tooltip: 'Delete',
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
     Color chipColor;
-    String label;
     
-    switch (status) {
-      case ConsultationStatus.confirmed:
+    switch (status.toLowerCase()) {
+      case 'confirmed':
         chipColor = Colors.green;
-        label = 'Confirmed';
         break;
-      case ConsultationStatus.pending:
+      case 'pending':
         chipColor = Colors.orange;
-        label = 'Pending';
         break;
-      case ConsultationStatus.completed:
+      case 'completed':
         chipColor = Colors.blue;
-        label = 'Completed';
         break;
-      case ConsultationStatus.cancelled:
+      case 'cancelled':
         chipColor = Colors.red;
-        label = 'Cancelled';
         break;
+      default:
+        chipColor = Colors.grey;
     }
     
     return Chip(
       label: Text(
-        label,
+        status.toUpperCase(),
         style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
       backgroundColor: chipColor,
@@ -609,269 +491,95 @@ class ConsultationCard extends StatelessWidget {
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final month = dateTime.month.toString().padLeft(2, '0');
-    final year = dateTime.year.toString();
-    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
-    
-    return '$day/$month/$year, $hour:$minute $period';
-  }
-
-  void _showRescheduleDialog(BuildContext context, Consultation consultation, VoidCallback? onReschedule) {
-    DateTime selectedDate = consultation.dateTime;
-    TimeOfDay selectedTime = TimeOfDay.fromDateTime(consultation.dateTime);
-
-    showDialog(
+  void _showDoctorDetails(Map<String, dynamic> doctor) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Reschedule Consultation'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Date'),
-                subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 90)),
-                  );
-                  if (picked != null) {
-                    setDialogState(() {
-                      selectedDate = picked;
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                title: const Text('Time'),
-                subtitle: Text(selectedTime.format(context)),
-                trailing: const Icon(Icons.access_time),
-                onTap: () async {
-                  final TimeOfDay? picked = await showTimePicker(
-                    context: context,
-                    initialTime: selectedTime,
-                  );
-                  if (picked != null) {
-                    setDialogState(() {
-                      selectedTime = picked;
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Update the consultation date and time
-                consultation.dateTime = DateTime(
-                  selectedDate.year,
-                  selectedDate.month,
-                  selectedDate.day,
-                  selectedTime.hour,
-                  selectedTime.minute,
-                );
-                
-                Navigator.pop(context);
-                onReschedule?.call();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Consultation rescheduled successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              child: const Text('Reschedule'),
-            ),
-          ],
-        ),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    );
-  }
-}
-
-void _showRescheduleDialog(BuildContext context, Consultation consultation, [VoidCallback? onReschedule]) {
-  DateTime selectedDate = consultation.dateTime;
-  TimeOfDay selectedTime = TimeOfDay.fromDateTime(consultation.dateTime);
-
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: const Text('Reschedule Consultation'),
-        content: Column(
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              title: const Text('Date'),
-              subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 90)),
-                );
-                if (picked != null) {
-                  setState(() {
-                    selectedDate = picked;
-                  });
-                }
-              },
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.blue.shade100,
+                  backgroundImage: doctor['profile_image_url'] != null
+                      ? NetworkImage(doctor['profile_image_url'])
+                      : null,
+                  child: doctor['profile_image_url'] == null
+                      ? Text(
+                          doctor['name'].toString().substring(0, 2).toUpperCase(),
+                          style: TextStyle(color: Colors.blue.shade800, fontSize: 24),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doctor['name'],
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        doctor['specialty'],
+                        style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        doctor['hospital'],
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 18),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${doctor['rating']} Rating',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            ListTile(
-              title: const Text('Time'),
-              subtitle: Text(selectedTime.format(context)),
-              trailing: const Icon(Icons.access_time),
-              onTap: () async {
-                final TimeOfDay? picked = await showTimePicker(
-                  context: context,
-                  initialTime: selectedTime,
-                );
-                if (picked != null) {
-                  setState(() {
-                    selectedTime = picked;
-                  });
-                }
-              },
+            const SizedBox(height: 24),
+            _buildInfoSection('Experience', '${doctor['experience']} years of practice'),
+            _buildInfoSection('Consultation Fee', '\$${doctor['consultation_fee']} per session'),
+            _buildInfoSection('About', doctor['about']),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: TrackedButton(
+                buttonName: 'book_from_details',
+                screenName: 'doctor_details',
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showBookConsultationForm(doctor);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Book Consultation', style: TextStyle(fontSize: 16)),
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Update the consultation date and time
-              consultation.dateTime = DateTime(
-                selectedDate.year,
-                selectedDate.month,
-                selectedDate.day,
-                selectedTime.hour,
-                selectedTime.minute,
-              );
-              
-              Navigator.pop(context);
-              onReschedule?.call();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Consultation rescheduled successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Reschedule'),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class DoctorDetailsSheet extends StatelessWidget {
-  final Doctor doctor;
-
-  const DoctorDetailsSheet({super.key, required this.doctor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.blue.shade100,
-                child: Text(
-                  doctor.name.substring(0, 2),
-                  style: TextStyle(color: Colors.blue.shade800, fontSize: 24),
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      doctor.name,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      doctor.specialty,
-                      style: TextStyle(color: Colors.grey[700], fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      doctor.hospital,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 18),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${doctor.rating} Rating',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildInfoSection('Experience', '${doctor.experience} years of practice'),
-          _buildInfoSection('Consultation Fee', '\$${doctor.consultationFee} per session'),
-          _buildInfoSection('Availability', doctor.availability.join(', ')),
-          _buildInfoSection('About', doctor.about),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (context) => BookConsultationForm(doctor: doctor),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Book Consultation', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -895,351 +603,507 @@ class DoctorDetailsSheet extends StatelessWidget {
       ),
     );
   }
-}
 
-class ConsultationDetailsSheet extends StatelessWidget {
-  final Consultation consultation;
+  void _showAddDoctorDialog() {
+    final nameController = TextEditingController();
+    final specialtyController = TextEditingController();
+    final hospitalController = TextEditingController();
+    final aboutController = TextEditingController();
+    double rating = 4.5;
+    int experience = 5;
+    int consultationFee = 150;
+    List<String> availability = ['Mon', 'Wed', 'Fri'];
+    PlatformFile? profileImage;
 
-  const ConsultationDetailsSheet({super.key, required this.consultation});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Consultation Details',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildInfoRow('Doctor', consultation.doctor.name),
-          _buildInfoRow('Specialty', consultation.doctor.specialty),
-          _buildInfoRow('Hospital', consultation.doctor.hospital),
-          _buildInfoRow('Date & Time', _formatDateTime(consultation.dateTime)),
-          _buildInfoRow('Type', consultation.type == ConsultationType.video ? 'Video Consultation' : 'In-Person Visit'),
-          _buildInfoRow('Status', _getStatusString(consultation.status)),
-          if (consultation.symptoms.isNotEmpty)
-            _buildInfoRow('Symptoms', consultation.symptoms.join(', ')),
-          if (consultation.notes.isNotEmpty)
-            _buildInfoRow('Notes', consultation.notes),
-          if (consultation.prescription != null && consultation.prescription!.isNotEmpty)
-            _buildInfoRow('Prescription', consultation.prescription!),
-          if (consultation.followUpDate != null)
-            _buildInfoRow('Follow-up Date', _formatDate(consultation.followUpDate!)),
-          const SizedBox(height: 24),
-          if (consultation.status == ConsultationStatus.confirmed) ...[  
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add New Doctor'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // Cancel logic
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.cancel),
-                  label: const Text('Cancel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Doctor Name',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showRescheduleDialog(context, consultation, null);
-                  },
-                  icon: const Icon(Icons.schedule),
-                  label: const Text('Reschedule'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                const SizedBox(height: 16),
+                TextField(
+                  controller: specialtyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Specialty',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: hospitalController,
+                  decoration: const InputDecoration(
+                    labelText: 'Hospital',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: aboutController,
+                  decoration: const InputDecoration(
+                    labelText: 'About',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Text('Rating: '),
+                    Expanded(
+                      child: Slider(
+                        value: rating,
+                        min: 1.0,
+                        max: 5.0,
+                        divisions: 40,
+                        label: rating.toStringAsFixed(1),
+                        onChanged: (value) => setDialogState(() => rating = value),
+                      ),
+                    ),
+                    Text(rating.toStringAsFixed(1)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        profileImage != null ? Icons.check_circle : Icons.person,
+                        size: 48,
+                        color: profileImage != null ? Colors.green : Colors.grey,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        profileImage != null 
+                            ? 'Profile Image: ${profileImage!.name}'
+                            : 'No profile image',
+                        style: TextStyle(
+                          color: profileImage != null ? Colors.green : Colors.grey[600],
+                          fontWeight: profileImage != null ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            FilePickerResult? result = await FilePicker.platform.pickFiles(
+                              type: FileType.image,
+                              allowMultiple: false,
+                            );
+                            
+                            if (result != null && result.files.isNotEmpty) {
+                              setDialogState(() {
+                                profileImage = result.files.first;
+                              });
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error selecting image: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Add Profile Image'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ] else if (consultation.status == ConsultationStatus.completed) ...[  
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Book follow-up logic
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Book Follow-up'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TrackedButton(
+              buttonName: 'add_doctor_confirm',
+              screenName: 'add_doctor_dialog',
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && 
+                    specialtyController.text.isNotEmpty &&
+                    hospitalController.text.isNotEmpty) {
+                  if (!mounted) return;
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                  
+                  try {
+                    await DoctorConsultationService.createDoctor(
+                      name: nameController.text,
+                      specialty: specialtyController.text,
+                      hospital: hospitalController.text,
+                      rating: rating,
+                      experience: experience,
+                      consultationFee: consultationFee,
+                      availability: availability,
+                      about: aboutController.text,
+                      profileImage: profileImage,
+                    );
+                    
+                    await _loadData();
+                    
+                    if (mounted) {
+                      navigator.pop(); // Close loading
+                      navigator.pop(); // Close dialog
+                      
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Doctor added successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      navigator.pop(); // Close loading
+                      
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to add doctor: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              child: const Text('Add'),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
+  void _showBookConsultationForm(Map<String, dynamic> doctor) {
+    final symptomsController = TextEditingController();
+    final notesController = TextEditingController();
+    String consultationType = 'video';
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    PlatformFile? medicalDocument;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    );
-  }
-
-  String _getStatusString(ConsultationStatus status) {
-    switch (status) {
-      case ConsultationStatus.confirmed:
-        return 'Confirmed';
-      case ConsultationStatus.pending:
-        return 'Pending';
-      case ConsultationStatus.completed:
-        return 'Completed';
-      case ConsultationStatus.cancelled:
-        return 'Cancelled';
-    }
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final month = dateTime.month.toString().padLeft(2, '0');
-    final year = dateTime.year.toString();
-    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
-    
-    return '$day/$month/$year, $hour:$minute $period';
-  }
-
-  String _formatDate(DateTime dateTime) {
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final month = dateTime.month.toString().padLeft(2, '0');
-    final year = dateTime.year.toString();
-    
-    return '$day/$month/$year';
-  }
-}
-
-class BookConsultationForm extends StatefulWidget {
-  final Doctor doctor;
-
-  const BookConsultationForm({super.key, required this.doctor});
-
-  @override
-  BookConsultationFormState createState() => BookConsultationFormState();
-}
-
-class BookConsultationFormState extends State<BookConsultationForm> {
-  final _formKey = GlobalKey<FormState>();
-  ConsultationType _consultationType = ConsultationType.video;
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 10, minute: 0);
-  final TextEditingController _symptomsController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-
-  @override
-  void dispose() {
-    _symptomsController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 20,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Book Consultation with ${widget.doctor.name}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              const Text('Consultation Type', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<ConsultationType>(
-                      title: const Text('Video'),
-                      value: ConsultationType.video,
-                      groupValue: _consultationType,
-                      onChanged: (ConsultationType? value) {
-                        if (value != null) {
-                          setState(() {
-                            _consultationType = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<ConsultationType>(
-                      title: const Text('In-Person'),
-                      value: ConsultationType.inPerson,
-                      groupValue: _consultationType,
-                      onChanged: (ConsultationType? value) {
-                        if (value != null) {
-                          setState(() {
-                            _consultationType = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ListTile(
-                      title: const Text('Date'),
-                      subtitle: Text(_formatDate(_selectedDate)),
-                      onTap: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 90)),
-                        );
-                        if (picked != null && picked != _selectedDate) {
-                          setState(() {
-                            _selectedDate = picked;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: ListTile(
-                      title: const Text('Time'),
-                      subtitle: Text(_formatTime(_selectedTime)),
-                      onTap: () async {
-                        final TimeOfDay? picked = await showTimePicker(
-                          context: context,
-                          initialTime: _selectedTime,
-                        );
-                        if (picked != null && picked != _selectedTime) {
-                          setState(() {
-                            _selectedTime = picked;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _symptomsController,
-                decoration: const InputDecoration(
-                  labelText: 'Symptoms (comma separated)',
-                  border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Book Consultation with ${doctor['name']}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your symptoms';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Additional Notes',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
+                const SizedBox(height: 20),
+                const Text('Consultation Type', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Consultation Fee: \$${widget.doctor.consultationFee}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Available on: ${widget.doctor.availability.join(', ')}',
-                            style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
-                          ),
-                        ],
+                      child: RadioListTile<String>(
+                        title: const Text('Video'),
+                        value: 'video',
+                        groupValue: consultationType,
+                        onChanged: (value) => setSheetState(() => consultationType = value!),
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('In-Person'),
+                        value: 'in_person',
+                        groupValue: consultationType,
+                        onChanged: (value) => setSheetState(() => consultationType = value!),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      // Book consultation logic would go here
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Consultation request submitted!')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        title: const Text('Date'),
+                        subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 90)),
+                          );
+                          if (picked != null) {
+                            setSheetState(() => selectedDate = picked);
+                          }
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        title: const Text('Time'),
+                        subtitle: Text(selectedTime.format(context)),
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: selectedTime,
+                          );
+                          if (picked != null) {
+                            setSheetState(() => selectedTime = picked);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: symptomsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Symptoms (comma separated)',
+                    border: OutlineInputBorder(),
                   ),
-                  child: const Text('Confirm Booking', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Additional Notes',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        medicalDocument != null ? Icons.check_circle : Icons.attach_file,
+                        size: 48,
+                        color: medicalDocument != null ? Colors.green : Colors.grey,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        medicalDocument != null 
+                            ? 'Document: ${medicalDocument!.name}'
+                            : 'No medical document',
+                        style: TextStyle(
+                          color: medicalDocument != null ? Colors.green : Colors.grey[600],
+                          fontWeight: medicalDocument != null ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            FilePickerResult? result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                              allowMultiple: false,
+                            );
+                            
+                            if (result != null && result.files.isNotEmpty) {
+                              setSheetState(() {
+                                medicalDocument = result.files.first;
+                              });
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error selecting file: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.attach_file),
+                        label: const Text('Add Medical Document'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: TrackedButton(
+                    buttonName: 'confirm_booking',
+                    screenName: 'book_consultation',
+                    onPressed: () async {
+                      if (symptomsController.text.isNotEmpty) {
+                        if (!mounted) return;
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                        
+                        try {
+                          final dateTime = DateTime(
+                            selectedDate.year,
+                            selectedDate.month,
+                            selectedDate.day,
+                            selectedTime.hour,
+                            selectedTime.minute,
+                          );
+                          
+                          await DoctorConsultationService.bookConsultation(
+                            doctorId: doctor['id'],
+                            dateTime: dateTime,
+                            consultationType: consultationType,
+                            symptoms: symptomsController.text.split(',').map((s) => s.trim()).toList(),
+                            notes: notesController.text,
+                            medicalDocument: medicalDocument,
+                          );
+                          
+                          await _loadData();
+                          
+                          if (mounted) {
+                            navigator.pop(); // Close loading
+                            navigator.pop(); // Close sheet
+                            
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Consultation booked successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            navigator.pop(); // Close loading
+                            
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to book consultation: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Confirm Booking', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMedicalDocument(Map<String, dynamic> consultation) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Medical Document',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Expanded(
+                child: Center(
+                  child: Image.network(
+                    consultation['medical_document_url'],
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const CircularProgressIndicator();
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          SizedBox(height: 16),
+                          Text('Failed to load document'),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -1249,250 +1113,290 @@ class BookConsultationFormState extends State<BookConsultationForm> {
     );
   }
 
-  String _formatDate(DateTime dateTime) {
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final month = dateTime.month.toString().padLeft(2, '0');
-    final year = dateTime.year.toString();
-    
-    return '$day/$month/$year';
+  void _showFilterOptions() {
+    String? selectedSpecialty;
+    double? minRating;
+    int? minExperience;
+
+    final specialties = ['Cardiologist', 'Neurologist', 'Pediatrician', 'Orthopedic Surgeon', 'Dermatologist', 'Psychiatrist'];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Filter Doctors',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              const Text('Specialty', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('All'),
+                    selected: selectedSpecialty == null,
+                    onSelected: (selected) => setSheetState(() => selectedSpecialty = null),
+                  ),
+                  ...specialties.map((specialty) {
+                    return FilterChip(
+                      label: Text(specialty),
+                      selected: selectedSpecialty == specialty,
+                      onSelected: (selected) => setSheetState(() => selectedSpecialty = selected ? specialty : null),
+                    );
+                  }),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  TrackedButton(
+                    buttonName: 'apply_filters',
+                    screenName: 'filter_dialog',
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      
+                      try {
+                        final filteredDoctors = await DoctorConsultationService.filterDoctors(
+                          specialty: selectedSpecialty,
+                          minRating: minRating,
+                          minExperience: minExperience,
+                        );
+                        
+                        setState(() {
+                          _filteredDoctors = filteredDoctors;
+                        });
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error applying filters: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Apply Filters'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  String _formatTime(TimeOfDay timeOfDay) {
-    final hour = timeOfDay.hourOfPeriod == 0 ? 12 : timeOfDay.hourOfPeriod;
-    final minute = timeOfDay.minute.toString().padLeft(2, '0');
-    final period = timeOfDay.period == DayPeriod.am ? 'AM' : 'PM';
-    
-    return '$hour:$minute $period';
+  void _showRescheduleDialog(Map<String, dynamic> consultation) {
+    DateTime selectedDate = (consultation['date_time'] as Timestamp).toDate();
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(selectedDate);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Reschedule Consultation'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Date'),
+                subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedDate = picked);
+                  }
+                },
+              ),
+              ListTile(
+                title: const Text('Time'),
+                subtitle: Text(selectedTime.format(context)),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: selectedTime,
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedTime = picked);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TrackedButton(
+              buttonName: 'confirm_reschedule',
+              screenName: 'reschedule_dialog',
+              onPressed: () async {
+                if (!mounted) return;
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                
+                try {
+                  final newDateTime = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                    selectedTime.hour,
+                    selectedTime.minute,
+                  );
+                  
+                  await DoctorConsultationService.rescheduleConsultation(
+                    consultation['id'],
+                    newDateTime,
+                  );
+                  
+                  await _loadData();
+                  
+                  navigator.pop();
+                  
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Consultation rescheduled successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error rescheduling: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Reschedule'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-}
 
-class FilterOptionsSheet extends StatefulWidget {
-  final Function(String? specialty, double? minRating, int? minExperience) onApplyFilters;
-
-  const FilterOptionsSheet({super.key, required this.onApplyFilters});
-
-  @override
-  FilterOptionsSheetState createState() => FilterOptionsSheetState();
-}
-
-class FilterOptionsSheetState extends State<FilterOptionsSheet> {
-  String? _selectedSpecialty;
-  double? _minRating;
-  int? _minExperience;
-
-  final List<String> _specialties = [
-    'Cardiologist',
-    'Neurologist',
-    'Pediatrician',
-    'Orthopedic Surgeon',
-    'Dermatologist',
-    'Psychiatrist',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Filter Doctors',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  Future<void> _cancelConsultation(String consultationId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Consultation'),
+        content: const Text('Are you sure you want to cancel this consultation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
           ),
-          const SizedBox(height: 20),
-          const Text('Specialty', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('All'),
-                selected: _selectedSpecialty == null,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedSpecialty = null;
-                  });
-                },
-              ),
-              ..._specialties.map((specialty) {
-                return FilterChip(
-                  label: Text(specialty),
-                  selected: _selectedSpecialty == specialty,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedSpecialty = selected ? specialty : null;
-                    });
-                  },
-                );
-              }),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text('Minimum Rating', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('Any'),
-                selected: _minRating == null,
-                onSelected: (selected) {
-                  setState(() {
-                    _minRating = null;
-                  });
-                },
-              ),
-              FilterChip(
-                label: const Text('4.0+'),
-                selected: _minRating == 4.0,
-                onSelected: (selected) {
-                  setState(() {
-                    _minRating = selected ? 4.0 : null;
-                  });
-                },
-              ),
-              FilterChip(
-                label: const Text('4.5+'),
-                selected: _minRating == 4.5,
-                onSelected: (selected) {
-                  setState(() {
-                    _minRating = selected ? 4.5 : null;
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text('Minimum Experience', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('Any'),
-                selected: _minExperience == null,
-                onSelected: (selected) {
-                  setState(() {
-                    _minExperience = null;
-                  });
-                },
-              ),
-              FilterChip(
-                label: const Text('5+ years'),
-                selected: _minExperience == 5,
-                onSelected: (selected) {
-                  setState(() {
-                    _minExperience = selected ? 5 : null;
-                  });
-                },
-              ),
-              FilterChip(
-                label: const Text('10+ years'),
-                selected: _minExperience == 10,
-                onSelected: (selected) {
-                  setState(() {
-                    _minExperience = selected ? 10 : null;
-                  });
-                },
-              ),
-              FilterChip(
-                label: const Text('15+ years'),
-                selected: _minExperience == 15,
-                onSelected: (selected) {
-                  setState(() {
-                    _minExperience = selected ? 15 : null;
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Cancel'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  widget.onApplyFilters(_selectedSpecialty, _minRating, _minExperience);
-                  Navigator.pop(context);
-                },
-                child: const Text('Apply Filters'),
-              ),
-            ],
+          TrackedButton(
+            buttonName: 'confirm_cancel',
+            screenName: 'cancel_dialog',
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      
+      try {
+        await DoctorConsultationService.cancelConsultation(consultationId);
+        await _loadData();
+        
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Consultation cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error cancelling consultation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
-}
 
-enum ConsultationType {
-  video,
-  inPerson,
-}
+  Future<void> _deleteConsultation(String consultationId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Consultation'),
+        content: const Text('Are you sure you want to delete this consultation record?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TrackedButton(
+            buttonName: 'confirm_delete',
+            screenName: 'delete_dialog',
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
 
-enum ConsultationStatus {
-  confirmed,
-  pending,
-  completed,
-  cancelled,
-}
-
-class Doctor {
-  final String id;
-  final String name;
-  final String specialty;
-  final String hospital;
-  final double rating;
-  final int experience;
-  final int consultationFee;
-  final List<String> availability;
-  final String imageUrl;
-  final String about;
-
-  Doctor({
-    required this.id,
-    required this.name,
-    required this.specialty,
-    required this.hospital,
-    required this.rating,
-    required this.experience,
-    required this.consultationFee,
-    required this.availability,
-    required this.imageUrl,
-    required this.about,
-  });
-}
-
-class Consultation {
-  final String id;
-  final Doctor doctor;
-  DateTime dateTime;
-  final ConsultationType type;
-  final ConsultationStatus status;
-  final List<String> symptoms;
-  final String notes;
-  final String? prescription;
-  final DateTime? followUpDate;
-
-  Consultation({
-    required this.id,
-    required this.doctor,
-    required this.dateTime,
-    required this.type,
-    required this.status,
-    required this.symptoms,
-    required this.notes,
-    this.prescription,
-    this.followUpDate,
-  });
+    if (confirmed == true) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      
+      try {
+        await DoctorConsultationService.deleteConsultation(consultationId);
+        await _loadData();
+        
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Consultation deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error deleting consultation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }

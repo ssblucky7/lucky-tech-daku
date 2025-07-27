@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:finalapp/navigation/navigation_controller.dart';
+
 import 'package:finalapp/services/firebase_service.dart';
 import 'package:finalapp/services/cloudinary_service.dart';
 import 'package:finalapp/services/media_storage_service.dart';
@@ -12,6 +12,7 @@ import 'package:finalapp/utils/platform_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:finalapp/firebase_options.dart';
+import 'package:finalapp/widgets/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,16 +25,21 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Initialize services
-  await FirebaseService.initialize();
-  await CloudinaryService.initialize();
-  await MediaStorageService.initialize();
-  
-  // Initialize database collections
-  await DatabaseInitService.initializeCollections();
-  
-  // Check connectivity and sync offline data
-  await DataSyncService.checkConnectivity();
+  // Initialize services with error handling
+  try {
+    await FirebaseService.initialize();
+    await CloudinaryService.initialize();
+    await MediaStorageService.initialize();
+    
+    // Initialize database collections
+    await DatabaseInitService.initializeCollections();
+    
+    // Check connectivity and sync offline data
+    await DataSyncService.checkConnectivity();
+  } catch (e) {
+    if (kDebugMode) debugPrint('Service initialization error: $e');
+    // Continue app startup even if some services fail
+  }
   
   // Log app startup
   if (FirebaseService.isUserLoggedIn()) {
@@ -139,7 +145,7 @@ class CareSync extends StatelessWidget {
           ),
         ),
       ),
-      home: const NavigationController(),
+      home: const AuthWrapper(),
     );
   }
 }

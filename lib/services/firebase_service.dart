@@ -22,7 +22,7 @@ class FirebaseService {
       if (kDebugMode) debugPrint('Firebase services initialized successfully');
     } catch (e) {
       if (kDebugMode) debugPrint('Firebase services initialization error: $e');
-      rethrow;
+      // Don't rethrow to prevent app from crashing
     }
   }
   
@@ -44,6 +44,9 @@ class FirebaseService {
     
     // Sign out from Firebase
     await auth.signOut();
+    
+    // Force app restart by clearing all navigation
+    // The AuthWrapper will detect the cleared state and show login
   }
   
   // Check if user is logged in

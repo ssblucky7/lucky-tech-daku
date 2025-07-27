@@ -85,6 +85,7 @@ class Report extends BaseModel {
   String type;
   String? fileUrl;
   String? fileName;
+  String? publicId;
 
   Report({
     super.id,
@@ -101,6 +102,7 @@ class Report extends BaseModel {
     this.type = 'report',
     this.fileUrl,
     this.fileName,
+    this.publicId,
     super.createdAt,
     super.updatedAt,
   });
@@ -108,6 +110,7 @@ class Report extends BaseModel {
   @override
   Map<String, dynamic> toMap() {
     return {
+      'user_id': userId,
       'title': title,
       'patient': patient,
       'doctor': doctor,
@@ -120,6 +123,9 @@ class Report extends BaseModel {
       'type': type,
       'file_url': fileUrl,
       'file_name': fileName,
+      'public_id': publicId,
+      'created_at': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'updated_at': updatedAt != null ? Timestamp.fromDate(updatedAt!) : FieldValue.serverTimestamp(),
     };
   }
 
@@ -128,7 +134,9 @@ class Report extends BaseModel {
       title: map['title'] ?? '',
       patient: map['patient'] ?? '',
       doctor: map['doctor'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
+      date: map['date'] is Timestamp 
+          ? (map['date'] as Timestamp).toDate() 
+          : DateTime.now(),
       category: map['category'] ?? '',
       status: map['status'] ?? '',
       summary: map['summary'] ?? '',
@@ -137,6 +145,7 @@ class Report extends BaseModel {
       type: map['type'] ?? 'report',
       fileUrl: map['file_url'],
       fileName: map['file_name'],
+      publicId: map['public_id'],
     );
     report.fromMap(map, docId);
     return report;

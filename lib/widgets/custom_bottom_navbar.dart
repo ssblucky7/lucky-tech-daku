@@ -42,6 +42,10 @@ class CustomBottomNavBar extends StatelessWidget {
           label: 'Analytics',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.smart_toy),
+          label: 'AI Chat',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.person),
           label: 'Profile',
         ),

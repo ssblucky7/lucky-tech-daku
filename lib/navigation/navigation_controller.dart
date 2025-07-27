@@ -6,11 +6,13 @@ import 'package:finalapp/screens/calendar_screen.dart';
 import 'package:finalapp/screens/analytics_dashboard_screen.dart';
 import 'package:finalapp/screens/profile_screen.dart';
 import 'package:finalapp/screens/patient_management_screen.dart';
+import 'package:finalapp/screens/ai_chatbot_screen.dart';
 import 'package:finalapp/services/firebase_service.dart';
 import 'package:finalapp/widgets/custom_bottom_navbar.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/services/activity_tracking_service.dart';
+import 'package:finalapp/widgets/auth_wrapper.dart';
 
 class NavigationController extends StatefulWidget {
   final int initialIndex;
@@ -30,6 +32,7 @@ class _NavigationControllerState extends State<NavigationController> {
     const MultiOptionsScreen(),
     const CalendarScreen(),
     const AnalyticsDashboardScreen(),
+    const AIChatbotScreen(),
     const ProfileScreen(),
     const PatientManagementScreen(),
   ];
@@ -42,38 +45,41 @@ class _NavigationControllerState extends State<NavigationController> {
 
   @override
   Widget build(BuildContext context) {
-    return TrackedScreen(
-      screenName: 'navigation_controller',
-      child: Scaffold(
-      appBar: _currentIndex == 5 ? AppBar(
-        title: const Text('Profile'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          TrackedIconButton(
-            buttonName: 'logout',
-            screenName: 'profile_screen',
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ],
-      ) : null,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+    return PopScope(
+      canPop: false,
+      child: TrackedScreen(
+        screenName: 'navigation_controller',
+        child: Scaffold(
+        appBar: _currentIndex == 6 ? AppBar(
+          title: const Text('Profile'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          actions: [
+            TrackedIconButton(
+              buttonName: 'logout',
+              screenName: 'profile_screen',
+              icon: const Icon(Icons.logout),
+              onPressed: () => _showLogoutDialog(context),
+            ),
+          ],
+        ) : null,
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            // Track navigation change
+            _trackNavigation(index);
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+        ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          // Track navigation change
-          _trackNavigation(index);
-          setState(() {
-            _currentIndex = index;
-          });
-        },
       ),
-    ),
     );
   }
   
@@ -101,6 +107,12 @@ class _NavigationControllerState extends State<NavigationController> {
                 {'method': 'manual_logout'},
               );
               await FirebaseService.signOut();
+              
+              // Navigate to login screen
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const AuthWrapper()),
+                (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -120,6 +132,7 @@ class _NavigationControllerState extends State<NavigationController> {
       'multi_options_screen',
       'calendar_screen',
       'analytics_dashboard',
+      'ai_chatbot_screen',
       'profile_screen',
     ];
     
