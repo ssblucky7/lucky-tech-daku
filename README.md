@@ -241,5 +241,5 @@ flutter run
 <div align="center">
 <h1>Team Lucky-TechDaku</h1>
   <p>Made with ❤️ for better healthcare management</p>
-  <p>© 2024 CareSync. All rights reserved.</p>
+  <p>© 2025 CareSync. All rights reserved.</p>
 </div>
