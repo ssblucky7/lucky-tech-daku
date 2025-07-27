@@ -215,79 +215,17 @@ flutter test --coverage
 ```
 
 ## 📦 Build & Deployment
+flutter pub get
+flutter analyze
+flutter run
 
-### Android
-```bash
-# Build APK
-flutter build apk --release
 
-# Build App Bundle
-flutter build appbundle --release
-```
-
-### iOS
-```bash
-# Build iOS app
-flutter build ios --release
-```
-
-### Web
-```bash
-# Build web app
-flutter build web --release
-```
-
-### Desktop
-```bash
-# Windows
-flutter build windows --release
-
-# macOS
-flutter build macos --release
-```
-
-## 🔒 Security Features
-
-- **Data Encryption**: All sensitive data encrypted in transit and at rest
-- **Authentication**: Multi-factor authentication support
-- **Role-based Access**: Granular permissions for different user types
-- **HIPAA Compliance**: Healthcare data protection standards
-- **Offline Security**: Secure local data storage
-- **API Security**: Rate limiting and request validation
-
-## 📊 Performance Optimizations
-
-- **Lazy Loading**: On-demand screen and data loading
-- **Image Optimization**: Cloudinary integration for media optimization
-- **Caching**: Intelligent data caching strategies
-- **Offline Support**: Local database with sync capabilities
-- **Memory Management**: Efficient resource utilization
-- **Platform-specific Optimizations**: Tailored performance for each platform
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ### Development Guidelines
 - Follow Flutter/Dart style guidelines
-- Write comprehensive tests
-- Update documentation
 - Ensure cross-platform compatibility
 
-## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [Wiki](https://github.com/your-username/caresync/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-username/caresync/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/caresync/discussions)
-- **Email**: support@caresync.app
 
 ## 🙏 Acknowledgments
 
@@ -297,14 +235,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Google AI for Gemini integration
 - Open source community for various packages
 
-## 📈 Roadmap
-
-- [ ] Telemedicine video calls
-- [ ] Wearable device integration
-- [ ] Advanced AI diagnostics
-- [ ] Multi-language support
-- [ ] Blockchain health records
-- [ ] IoT device connectivity
 
 ---
 
