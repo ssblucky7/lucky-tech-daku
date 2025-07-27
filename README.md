@@ -235,11 +235,14 @@ flutter run
 - Google AI for Gemini integration
 - Open source community for various packages
 
+## Try Android APK APP
+Download Link: <a href='https://drive.google.com/file/d/1esy9ePkKjeoDbdXniZk0SFOvrwdk95Yk/view?usp=sharing'> CareSync </a>
+
 
 ---
 
 <div align="center">
 <h1>Team Lucky-TechDaku</h1>
   <p>Made with ❤️ for better healthcare management</p>
-  <p>© 2024 CareSync. All rights reserved.</p>
+  <p>© 2025 CareSync. All rights reserved.</p>
 </div>
