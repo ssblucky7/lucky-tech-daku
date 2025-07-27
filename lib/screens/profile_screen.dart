@@ -126,6 +126,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 3),
+                Text(
+                  'ID: ${_userData?['unique_id'] ?? 'CS${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}'}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 Text(
                   _userData?['email'] ?? 'No Email',

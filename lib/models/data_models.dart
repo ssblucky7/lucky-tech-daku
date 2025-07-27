@@ -21,6 +21,7 @@ abstract class BaseModel {
 
 // User Profile Model
 class UserProfile extends BaseModel {
+  String uniqueId;
   String email;
   String name;
   String role;
@@ -32,6 +33,7 @@ class UserProfile extends BaseModel {
   UserProfile({
     super.id,
     super.userId,
+    required this.uniqueId,
     required this.email,
     required this.name,
     this.role = 'patient',
@@ -46,6 +48,7 @@ class UserProfile extends BaseModel {
   @override
   Map<String, dynamic> toMap() {
     return {
+      'unique_id': uniqueId,
       'email': email,
       'name': name,
       'role': role,
@@ -58,6 +61,7 @@ class UserProfile extends BaseModel {
 
   factory UserProfile.fromMap(Map<String, dynamic> map, String docId) {
     final profile = UserProfile(
+      uniqueId: map['unique_id'] ?? '',
       email: map['email'] ?? '',
       name: map['name'] ?? '',
       role: map['role'] ?? 'patient',
