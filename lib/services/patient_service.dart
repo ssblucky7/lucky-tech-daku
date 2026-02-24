@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 
 import 'cloudinary_service.dart';
-import 'gemini_ocr_service.dart';
+import 'groq_ocr_service.dart';
 
 class PatientService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -24,7 +24,7 @@ class PatientService {
         publicId = uploadResult['publicId'];
 
         if (_isImageFile(file.name)) {
-          ocrData = await GeminiOCRService.extractTextFromImage(fileUrl!);
+          ocrData = await GroqOCRService.extractTextFromImage(fileUrl!);
         }
       }
 
@@ -72,7 +72,7 @@ class PatientService {
         publicId = uploadResult['publicId'];
 
         if (_isImageFile(file.name)) {
-          ocrData = await GeminiOCRService.extractTextFromImage(fileUrl!);
+          ocrData = await GroqOCRService.extractTextFromImage(fileUrl!);
         }
       }
 

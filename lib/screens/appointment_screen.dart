@@ -131,7 +131,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           border: InputBorder.none,
           hintText: hint,
         ),
-        value: value,
+        initialValue: value,
         onChanged: onChanged,
         items: items.map<DropdownMenuItem<String>>((String value) {
           return DropdownMenuItem<String>(

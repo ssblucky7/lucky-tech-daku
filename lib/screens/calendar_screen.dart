@@ -552,7 +552,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: eventType,
+                  initialValue: eventType,
                   decoration: const InputDecoration(
                     labelText: 'Event Type',
                     border: OutlineInputBorder(),

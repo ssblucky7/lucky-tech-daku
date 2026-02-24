@@ -326,7 +326,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: category,
+                    initialValue: category,
                     decoration: const InputDecoration(
                       labelText: 'Category',
                       border: OutlineInputBorder(),

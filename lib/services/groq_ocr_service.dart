@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class GeminiOCRService {
-  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? 'AIzaSyBi2qNZ8iLVUc-3pZKY-xa3BVMktmuO_J8';
+class GroqOCRService {
+  static String get _apiKey => dotenv.env['GROQ_API_KEY'] ?? '';
   static const String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   static Future<Map<String, dynamic>> extractTextFromImage(String imageUrl) async {

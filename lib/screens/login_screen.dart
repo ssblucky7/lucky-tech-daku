@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:finalapp/screens/signup_screen.dart';
 import 'package:finalapp/services/firebase_service.dart';
+import 'package:finalapp/modules/session_module.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -45,24 +48,44 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 30),
-              // Email/Username Field
+              // Email Field
               _buildTextField(
                 controller: _emailController,
-                hintText: 'Enter email or username',
+                hintText: 'Enter email',
                 obscureText: false,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 15),
               // Password Field
               _buildTextField(
                 controller: _passwordController,
                 hintText: 'Password',
-                obscureText: true,
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
               ),
               // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: _showForgotPasswordDialog,
                   child: const Text('Forgot Password?'),
                 ),
               ),
@@ -71,61 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : () async {
-                    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill all fields')),
-                      );
-                      return;
-                    }
-                    
-                    setState(() {
-                      _isLoading = true;
-                    });
-                    
-                    try {
-                      if (kDebugMode) debugPrint('Attempting login with email: ${_emailController.text.trim()}');
-                      
-                      final credential = await FirebaseService.signInWithEmailAndPasswordAndInit(
-                        _emailController.text.trim(),
-                        _passwordController.text,
-                      );
-                      
-                      if (kDebugMode) debugPrint('Login successful for user: ${credential.user?.uid}');
-                    } on FirebaseAuthException catch (e) {
-                      if (kDebugMode) debugPrint('Firebase auth error: ${e.code} - ${e.message}');
-                      String message = 'Login failed';
-                      switch (e.code) {
-                        case 'user-not-found':
-                          message = 'No user found with this email';
-                          break;
-                        case 'wrong-password':
-                          message = 'Wrong password';
-                          break;
-                        case 'invalid-email':
-                          message = 'Invalid email address';
-                          break;
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(message)),
-                        );
-                      }
-                    } catch (e) {
-                      if (kDebugMode) debugPrint('General login error: $e');
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Login failed. Please try again.')),
-                        );
-                      }
-                    } finally {
-                      if (mounted) {
-                        setState(() {
-                          _isLoading = false;
-                        });
-                      }
-                    }
-                  },
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -143,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text('Log In'),
+                      : const Text('Log In', style: TextStyle(fontSize: 16)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -223,18 +192,130 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _handleLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Please fill all fields', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseService.signInWithEmailAndPasswordAndInit(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      await SessionModule.initializeSession();
+      
+      if (kDebugMode) debugPrint('Login successful');
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed';
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No user found with this email';
+          break;
+        case 'wrong-password':
+          message = 'Wrong password';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled';
+          break;
+        case 'too-many-requests':
+          message = 'Too many attempts. Please try again later';
+          break;
+        default:
+          message = e.message ?? 'Login failed';
+      }
+      _showSnackBar(message, isError: true);
+    } catch (e) {
+      _showSnackBar('Login failed. Please try again.', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter your email to receive a password reset link'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                hintText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (emailController.text.isEmpty) {
+                _showSnackBar('Please enter your email', isError: true);
+                return;
+              }
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(
+                  email: emailController.text.trim(),
+                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _showSnackBar('Password reset email sent!');
+                }
+              } catch (e) {
+                _showSnackBar('Failed to send reset email', isError: true);
+              }
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     required bool obscureText,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
         filled: true,
         fillColor: Colors.white,
+        suffixIcon: suffixIcon,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),

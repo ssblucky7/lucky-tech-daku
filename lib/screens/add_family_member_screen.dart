@@ -198,7 +198,7 @@ class _AddFamilyMemberScreenState extends State<AddFamilyMemberScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.family_restroom),
                 ),
-                value: _selectedRelation,
+                initialValue: _selectedRelation,
                 onChanged: (value) {
                   setState(() {
                     _selectedRelation = value;
@@ -251,7 +251,7 @@ class _AddFamilyMemberScreenState extends State<AddFamilyMemberScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.wc),
                 ),
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 onChanged: (value) {
                   setState(() {
                     _selectedGender = value;
@@ -278,7 +278,7 @@ class _AddFamilyMemberScreenState extends State<AddFamilyMemberScreen> {
           title: const Text('Emergency Contact'),
           subtitle: const Text('Mark as emergency contact for this person'),
           value: _isEmergencyContact,
-          activeColor: Colors.blue,
+          activeThumbColor: Colors.blue,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -303,7 +303,7 @@ class _AddFamilyMemberScreenState extends State<AddFamilyMemberScreen> {
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.bloodtype),
           ),
-          value: _selectedBloodGroup,
+          initialValue: _selectedBloodGroup,
           onChanged: (value) {
             setState(() {
               _selectedBloodGroup = value;

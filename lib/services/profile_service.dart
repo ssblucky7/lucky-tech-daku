@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:finalapp/services/cloudinary_service.dart';
+import 'package:finalapp/services/profile_sync_service.dart';
 
 class ProfileService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -69,6 +70,9 @@ class ProfileService {
       };
 
       await docRef.set(profileData, SetOptions(merge: true));
+      
+      // Auto-sync profile across system
+      await ProfileSyncService.autoSyncOnUpdate(profileData);
       
       if (kDebugMode) {
         debugPrint('Profile updated: $userId');
@@ -362,6 +366,12 @@ class ProfileService {
           'public_id': uploadResult['public_id'],
           'updated_at': FieldValue.serverTimestamp(),
         });
+
+        // Sync profile image across system
+        final profile = await getUserProfile();
+        if (profile != null) {
+          await ProfileSyncService.autoSyncOnUpdate(profile);
+        }
 
         // Delete old image from Cloudinary
         if (oldPublicId != null) {

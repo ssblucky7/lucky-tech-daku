@@ -7,9 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 
 class CloudinaryService {
-  static String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'dqxypwaxs';
-  static String get _apiKey => dotenv.env['CLOUDINARY_API_KEY'] ?? '492323429775172';
-  static String get _apiSecret => dotenv.env['CLOUDINARY_API_SECRET'] ?? 'QQ6W2gO8fewKPN40GgMgTQxle4o';
+  static String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
+  static String get _apiKey => dotenv.env['CLOUDINARY_API_KEY'] ?? '';
+  static String get _apiSecret => dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
 
   static String get _folder => dotenv.env['CLOUDINARY_FOLDER'] ?? 'finalapp/patients';
 
@@ -21,6 +21,14 @@ class CloudinaryService {
 
   static Future<Map<String, String>> uploadFile(PlatformFile file) async {
     try {
+      if (_cloudName.isEmpty || _apiKey.isEmpty || _apiSecret.isEmpty) {
+        throw Exception('Cloudinary credentials not configured');
+      }
+      
+      if (file.bytes == null && file.path == null) {
+        throw Exception('File has no data');
+      }
+      
       final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final publicId = 'patient_${timestamp}_${Random().nextInt(1000)}';
       
@@ -36,34 +44,43 @@ class CloudinaryService {
         ..fields['public_id'] = publicId
         ..fields['folder'] = _folder;
       
-      if (kIsWeb) {
+      if (kIsWeb || file.bytes != null) {
         request.files.add(http.MultipartFile.fromBytes(
           'file',
           file.bytes!,
           filename: file.name,
         ));
-      } else {
+      } else if (file.path != null) {
         request.files.add(await http.MultipartFile.fromPath(
           'file',
           file.path!,
           filename: file.name,
         ));
+      } else {
+        throw Exception('No file data available');
       }
+      
+      if (kDebugMode) print('Uploading to Cloudinary: ${file.name}');
       
       final response = await request.send();
       final responseData = await http.Response.fromStream(response);
 
       if (response.statusCode != 200) {
-        throw Exception('Upload failed: ${responseData.body}');
+        if (kDebugMode) print('Cloudinary error: ${responseData.body}');
+        throw Exception('Upload failed (${response.statusCode}): ${responseData.body}');
       }
 
       final data = jsonDecode(responseData.body);
+      
+      if (kDebugMode) print('Upload successful: ${data['secure_url']}');
+      
       return {
         'url': data['secure_url'],
         'publicId': data['public_id'],
       };
     } catch (e) {
-      throw Exception('Cloudinary upload error: $e');
+      if (kDebugMode) print('Cloudinary upload error: $e');
+      throw Exception('Upload failed: $e');
     }
   }
 

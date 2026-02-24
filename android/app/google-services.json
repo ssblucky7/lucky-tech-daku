@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "1012131031867",
-    "project_id": "school-app-dfaea",
-    "storage_bucket": "school-app-dfaea.appspot.com"
+    "project_number": "1078897812002",
+    "project_id": "caresync-140be",
+    "storage_bucket": "caresync-140be.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1012131031867:android:finalapp",
+        "mobilesdk_app_id": "1:1078897812002:android:7d7be514406c8dbbc9207b",
         "android_client_info": {
-          "package_name": "com.example.finalapp"
+          "package_name": "ssb.caresync.com"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1012131031867-client_id.apps.googleusercontent.com",
+          "client_id": "1078897812002-s0j6r61dl7fqlstlakui0upb5s8r8euk.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc"
+          "current_key": "AIzaSyBFKwE7d4-vNbeQiBGALQdue0FdKz0gji8"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1012131031867-client_id.apps.googleusercontent.com",
+              "client_id": "1078897812002-s0j6r61dl7fqlstlakui0upb5s8r8euk.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

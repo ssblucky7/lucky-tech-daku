@@ -444,7 +444,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     labelText: 'Patient',
                     border: OutlineInputBorder(),
                   ),
-                  value: selectedPatient,
+                  initialValue: selectedPatient,
                   onChanged: (value) => selectedPatient = value,
                   items: patients.map((patient) {
                     return DropdownMenuItem<String>(
@@ -459,7 +459,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     labelText: 'Category',
                     border: OutlineInputBorder(),
                   ),
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   onChanged: (value) => selectedCategory = value,
                   items: categories.map((category) {
                     return DropdownMenuItem<String>(

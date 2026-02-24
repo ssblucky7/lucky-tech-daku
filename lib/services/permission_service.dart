@@ -1,6 +1,7 @@
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:finalapp/utils/platform_utils.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class PermissionService {
   static Future<bool> requestCameraPermission() async {
@@ -31,13 +32,23 @@ class PermissionService {
 
   static Future<bool> requestPhotosPermission() async {
     if (PlatformUtils.isWeb) return true;
-    if (PlatformUtils.isIOS) {
+    
+    if (PlatformUtils.isAndroid) {
+      // Android 13+ uses granular media permissions
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 33) {
+        final status = await Permission.photos.request();
+        return status == PermissionStatus.granted;
+      } else {
+        final status = await Permission.storage.request();
+        return status == PermissionStatus.granted;
+      }
+    } else if (PlatformUtils.isIOS) {
       final status = await Permission.photos.request();
       return status == PermissionStatus.granted;
-    } else {
-      final status = await Permission.storage.request();
-      return status == PermissionStatus.granted;
     }
+    
+    return true;
   }
 
   static Future<Map<Permission, PermissionStatus>> requestMultiplePermissions(

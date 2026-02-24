@@ -12,6 +12,7 @@ import 'package:finalapp/services/permission_service.dart';
 import 'package:finalapp/utils/platform_utils.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
+import 'package:finalapp/widgets/file_preview.dart';
 
 class MultiOptionsScreen extends StatefulWidget {
   const MultiOptionsScreen({super.key});
@@ -347,7 +348,7 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: qrType,
+                  initialValue: qrType,
                   decoration: const InputDecoration(
                     labelText: 'QR Type',
                     border: OutlineInputBorder(),
@@ -500,22 +501,26 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
 
   Future<void> _uploadFromGallery() async {
     final hasPermission = await PermissionService.requestPhotosPermission();
-    if (hasPermission) {
-      try {
-        final picker = ImagePicker();
-        final image = await picker.pickImage(
-          source: ImageSource.gallery,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
-        
-        if (image != null) {
-          await _processUpload(image.path, image.name, 'Gallery Image');
-        }
-      } catch (e) {
-        _showError('Failed to select image from gallery');
+    if (!hasPermission) {
+      _showError('Photos permission denied');
+      return;
+    }
+    
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        await _processUpload(image.path, image.name, 'Gallery Image');
       }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Gallery error: $e');
+      _showError('Failed to select image: $e');
     }
   }
 
@@ -526,22 +531,26 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
     }
     
     final hasPermission = await PermissionService.requestCameraPermission();
-    if (hasPermission) {
-      try {
-        final picker = ImagePicker();
-        final image = await picker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
-        
-        if (image != null) {
-          await _processUpload(image.path, image.name, 'Camera Photo');
-        }
-      } catch (e) {
-        _showError('Failed to capture photo');
+    if (!hasPermission) {
+      _showError('Camera permission denied');
+      return;
+    }
+    
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        await _processUpload(image.path, image.name, 'Camera Photo');
       }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Camera error: $e');
+      _showError('Failed to capture photo: $e');
     }
   }
 
@@ -550,31 +559,48 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
+        withData: true,
       );
       
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
+        if (file.bytes == null && file.path == null) {
+          _showError('Unable to read file data');
+          return;
+        }
         await _processFileUpload(file, 'Document');
       }
     } catch (e) {
-      _showError('Failed to select file');
+      if (kDebugMode) debugPrint('File picker error: $e');
+      _showError('Failed to select file: $e');
     }
   }
 
   Future<void> _processUpload(String filePath, String fileName, String category) async {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Uploading file...'),
+          ],
+        ),
+      ),
+    );
+    
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-      
-      // Read file bytes and create PlatformFile
       final bytes = await _readFileBytes(filePath);
       final file = PlatformFile(
         name: fileName,
         size: bytes.length,
         bytes: bytes,
+        path: filePath,
       );
       
       await QuickActionsService.uploadFile(
@@ -586,41 +612,73 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       await _loadData();
       
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('File uploaded successfully'),
+            content: Text('✓ File uploaded successfully'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('Upload error: $e');
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        _showError('Failed to upload file: $e');
+        Navigator.pop(context);
+        _showError('Upload failed: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
   }
 
   Future<Uint8List> _readFileBytes(String filePath) async {
     try {
+      if (PlatformUtils.isWeb) {
+        throw Exception('File path not available on web');
+      }
       final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('File not found');
+      }
       return await file.readAsBytes();
     } catch (e) {
-      throw Exception('Failed to read file: $e');
+      if (kDebugMode) debugPrint('Read file error: $e');
+      throw Exception('Cannot read file: $e');
     }
   }
 
   Future<void> _processFileUpload(PlatformFile file, String category) async {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Uploading file...'),
+          ],
+        ),
+      ),
+    );
+    
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
+      // Ensure file has bytes
+      PlatformFile fileToUpload = file;
+      if (file.bytes == null && file.path != null && !PlatformUtils.isWeb) {
+        final bytes = await File(file.path!).readAsBytes();
+        fileToUpload = PlatformFile(
+          name: file.name,
+          size: bytes.length,
+          bytes: bytes,
+          path: file.path,
+        );
+      }
       
       await QuickActionsService.uploadFile(
-        file: file,
+        file: fileToUpload,
         category: category,
         description: 'Uploaded via Quick Actions',
       );
@@ -628,80 +686,102 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       await _loadData();
       
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('File uploaded successfully'),
+            content: Text('✓ File uploaded successfully'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('File upload error: $e');
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        _showError('Failed to upload file: $e');
+        Navigator.pop(context);
+        _showError('Upload failed: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
   }
 
   Future<void> _scanDocument(String scanType) async {
+    if (PlatformUtils.isWeb) {
+      _showError('Document scanning not available on web');
+      return;
+    }
+    
     final hasPermission = await PermissionService.requestCameraPermission();
-    if (hasPermission) {
-      try {
-        // Take photo for scanning
-        final picker = ImagePicker();
-        final image = await picker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
+    if (!hasPermission) {
+      _showError('Camera permission denied');
+      return;
+    }
+    
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image == null) return;
+      
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Processing scan...'),
+            ],
+          ),
+        ),
+      );
+      
+      final bytes = await image.readAsBytes();
+      final scannedImage = PlatformFile(
+        name: 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        size: bytes.length,
+        bytes: bytes,
+        path: image.path,
+      );
+      
+      final mockContent = 'Scanned $scanType - ${DateTime.now().toString().substring(0, 19)}';
+      
+      await QuickActionsService.saveScanResult(
+        scanType: scanType,
+        content: mockContent,
+        scannedImage: scannedImage,
+        extractedData: {
+          'scan_date': DateTime.now().toIso8601String(),
+          'scan_type': scanType,
+          'confidence': 0.95,
+        },
+      );
+      
+      await _loadData();
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ $scanType scanned successfully'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
         );
-        
-        if (image != null) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const Center(child: CircularProgressIndicator()),
-          );
-          
-          // Read image bytes
-          final bytes = await image.readAsBytes();
-          final scannedImage = PlatformFile(
-            name: 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg',
-            size: bytes.length,
-            bytes: bytes,
-          );
-          
-          final mockContent = 'Scanned $scanType content - ${DateTime.now().millisecondsSinceEpoch}';
-          
-          await QuickActionsService.saveScanResult(
-            scanType: scanType,
-            content: mockContent,
-            scannedImage: scannedImage,
-            extractedData: {
-              'scan_date': DateTime.now().toIso8601String(),
-              'scan_type': scanType,
-              'confidence': 0.95,
-            },
-          );
-          
-          await _loadData();
-          
-          if (mounted) {
-            Navigator.pop(context); // Close loading
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$scanType scanned successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.pop(context); // Close loading
-          _showError('Failed to scan $scanType: $e');
-        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Scan error: $e');
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        _showError('Scan failed: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
   }
@@ -710,10 +790,11 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
     try {
       final profileData = {
         'name': 'John Doe',
-        'patient_id': 'P12345',
-        'email': 'john.doe@example.com',
+        'patient_id': 'P${DateTime.now().millisecondsSinceEpoch % 100000}',
+        'email': 'patient@caresync.app',
         'phone': '+1234567890',
         'emergency_contact': '+0987654321',
+        'created': DateTime.now().toIso8601String(),
       };
       
       final shareId = await QuickActionsService.createSharedProfile(
@@ -733,13 +814,15 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Share link created and shared'),
+            content: Text('✓ Share link created and shared'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      _showError('Failed to create share link');
+      if (kDebugMode) debugPrint('Share link error: $e');
+      _showError('Failed to create share link: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -758,13 +841,15 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile QR code generated'),
+            content: Text('✓ Profile QR code generated'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      _showError('Failed to generate profile QR code');
+      if (kDebugMode) debugPrint('QR generation error: $e');
+      _showError('Failed to generate QR code: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -797,23 +882,16 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
         ),
         content: SizedBox(
           width: double.maxFinite,
-          height: 400,
+          height: 500,
           child: items.isEmpty
               ? const Center(child: Text('No items found'))
-              : ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return ListTile(
-                      leading: Icon(icon, color: color),
-                      title: Text(item['title'] ?? item['file_name'] ?? item['scan_type'] ?? 'Item'),
-                      subtitle: Text(item['created_at']?.toString() ?? 'No date'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteItem(title, item['id'], index),
-                      ),
-                    );
+              : FileListPreview(
+                  files: items,
+                  onTap: (file) {
+                    Navigator.pop(context);
+                    _showFileDetail(file, title);
                   },
+                  onDelete: (file) => _deleteItem(title, file['id'], 0),
                 ),
         ),
         actions: [
@@ -837,16 +915,18 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
       await _loadData();
       
       if (mounted) {
-        Navigator.pop(context); // Close dialog
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${type.substring(0, type.length - 1)} deleted'),
+            content: Text('✓ ${type.substring(0, type.length - 1)} deleted'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      _showError('Failed to delete item');
+      if (kDebugMode) debugPrint('Delete error: $e');
+      _showError('Failed to delete: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -856,8 +936,135 @@ class _MultiOptionsScreenState extends State<MultiOptionsScreen> {
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
         ),
       );
     }
+  }
+
+  void _showFileDetail(Map<String, dynamic> file, String type) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 600,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: Text(
+                  file['file_name'] ?? file['title'] ?? 'File Details',
+                  overflow: TextOverflow.ellipsis,
+                ),
+                automaticallyImplyLeading: false,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: FilePreview(
+                          fileUrl: file['file_url'] ?? file['image_url'],
+                          fileName: file['file_name'] ?? file['title'],
+                          fileType: file['file_type'],
+                          height: 250,
+                          width: double.infinity,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDetailRow('Name', file['file_name'] ?? file['title'] ?? 'N/A'),
+                      _buildDetailRow('Type', file['file_type'] ?? file['scan_type'] ?? 'N/A'),
+                      _buildDetailRow('Category', file['category'] ?? 'N/A'),
+                      _buildDetailRow('Size', _formatFileSize(file['file_size'])),
+                      _buildDetailRow('Description', file['description'] ?? file['content'] ?? 'N/A'),
+                      if (file['created_at'] != null)
+                        _buildDetailRow('Created', file['created_at'].toString()),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _deleteItem(type, file['id'], 0);
+                        },
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Delete'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Close'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String? value) {
+    if (value == null || value == 'N/A') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatFileSize(dynamic size) {
+    if (size == null) return 'N/A';
+    final bytes = size is int ? size : int.tryParse(size.toString());
+    if (bytes == null) return 'N/A';
+    
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }

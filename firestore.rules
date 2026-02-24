@@ -1,40 +1,53 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Check if user is authenticated
+    
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Check if user is accessing their own data
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    // Check if user is an admin
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    // All collections require authentication
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
     }
     
-    // Patient data
-    match /patients/{document} {
+    // User-specific data
+    match /caresync_users/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+    
+    match /caresync_appointments/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_medications/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_family_members/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_medical_reports/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_notifications/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_messages/{document} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /caresync_user_activities/{document} {
+      allow create: if isAuthenticated();
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (isOwner(resource.data.user_id) || isAdmin());
-    }
-    
-    // User activity tracking
-    match /caresync_user_activities/{activityId} {
-      // Users can create their own activity records
-      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
-      
-      // Users can read their own activity records
-      allow read: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
-      
-      // Only admins can delete activity records
-      allow delete: if isAuthenticated() && isAdmin();
-      
-      // No one can update activity records (immutable)
-      allow update: if false;
+      allow update, delete: if false;
     }
   }
 }

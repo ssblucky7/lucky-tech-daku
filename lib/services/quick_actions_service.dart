@@ -25,41 +25,45 @@ class QuickActionsService {
         userId = user.uid;
       }
 
+      if (kDebugMode) {
+        debugPrint('Uploading file: ${file.name} (${file.size} bytes)');
+      }
+
       final docRef = _firestore.collection(_uploadsCollection).doc();
       
       // Upload file to Cloudinary
       final uploadResult = await CloudinaryService.uploadFile(file);
       
-      if (uploadResult.containsKey('success') && uploadResult['success'].toString() == 'true') {
-        final uploadData = {
-          'id': docRef.id,
-          'user_id': userId,
-          'file_name': file.name,
-          'file_size': file.size,
-          'file_type': file.extension ?? 'unknown',
-          'category': category,
-          'description': description ?? '',
-          'file_url': uploadResult['url'],
-          'public_id': uploadResult['public_id'],
-          'created_at': FieldValue.serverTimestamp(),
-          'updated_at': FieldValue.serverTimestamp(),
-        };
-
-        await docRef.set(uploadData);
-        
-        if (kDebugMode) {
-          debugPrint('File uploaded: ${docRef.id}');
-        }
-        
-        return docRef.id;
-      } else {
-        throw Exception('Failed to upload file to cloud storage');
+      if (kDebugMode) {
+        debugPrint('Cloudinary upload successful: ${uploadResult['url']}');
       }
+      
+      final uploadData = {
+        'id': docRef.id,
+        'user_id': userId,
+        'file_name': file.name,
+        'file_size': file.size,
+        'file_type': file.extension ?? 'unknown',
+        'category': category,
+        'description': description ?? '',
+        'file_url': uploadResult['url'],
+        'public_id': uploadResult['publicId'],
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      };
+
+      await docRef.set(uploadData);
+      
+      if (kDebugMode) {
+        debugPrint('File record saved to Firestore: ${docRef.id}');
+      }
+      
+      return docRef.id;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Error uploading file: $e');
       }
-      throw Exception('Failed to upload file: $e');
+      throw Exception('Upload failed: $e');
     }
   }
 
@@ -77,6 +81,10 @@ class QuickActionsService {
         userId = user.uid;
       }
 
+      if (kDebugMode) {
+        debugPrint('Saving scan result: $scanType');
+      }
+
       final docRef = _firestore.collection(_scansCollection).doc();
       
       String? imageUrl;
@@ -84,11 +92,14 @@ class QuickActionsService {
       
       // Upload scanned image to Cloudinary if provided
       if (scannedImage != null) {
+        if (kDebugMode) {
+          debugPrint('Uploading scanned image to Cloudinary');
+        }
         final uploadResult = await CloudinaryService.uploadFile(scannedImage);
-        
-        if (uploadResult.containsKey('success') && uploadResult['success'].toString() == 'true') {
-          imageUrl = uploadResult['url'];
-          publicId = uploadResult['public_id'];
+        imageUrl = uploadResult['url'];
+        publicId = uploadResult['publicId'];
+        if (kDebugMode) {
+          debugPrint('Scan image uploaded: $imageUrl');
         }
       }
 
@@ -107,7 +118,7 @@ class QuickActionsService {
       await docRef.set(scanData);
       
       if (kDebugMode) {
-        debugPrint('Scan result saved: ${docRef.id}');
+        debugPrint('Scan result saved to Firestore: ${docRef.id}');
       }
       
       return docRef.id;
@@ -115,7 +126,7 @@ class QuickActionsService {
       if (kDebugMode) {
         debugPrint('Error saving scan result: $e');
       }
-      throw Exception('Failed to save scan result: $e');
+      throw Exception('Scan save failed: $e');
     }
   }
 

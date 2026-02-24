@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:finalapp/services/medication_tracker_service.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
+import 'package:finalapp/widgets/file_preview.dart';
 
 class MedicationTrackerScreen extends StatefulWidget {
   const MedicationTrackerScreen({super.key});
@@ -487,7 +488,7 @@ class _MedicationTrackerScreenState extends State<MedicationTrackerScreen> with 
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedFrequency,
+                  initialValue: selectedFrequency,
                   decoration: const InputDecoration(
                     labelText: 'Frequency',
                     border: OutlineInputBorder(),
@@ -499,7 +500,7 @@ class _MedicationTrackerScreenState extends State<MedicationTrackerScreen> with 
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Type',
                     border: OutlineInputBorder(),
@@ -671,50 +672,29 @@ class _MedicationTrackerScreenState extends State<MedicationTrackerScreen> with 
       context: context,
       builder: (context) => Dialog(
         child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(16),
+          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 700),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Prescription - ${medication['name']}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+              AppBar(
+                title: Text('Prescription - ${medication['name']}'),
+                automaticallyImplyLeading: false,
+                actions: [
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const Divider(),
               Expanded(
-                child: Center(
-                  child: Image.network(
-                    medication['prescription_image_url'],
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FilePreview(
+                    fileUrl: medication['prescription_image_url'],
+                    fileName: 'Prescription - ${medication['name']}',
+                    fileType: 'jpg',
+                    width: double.infinity,
+                    height: double.infinity,
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const CircularProgressIndicator();
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 64, color: Colors.red),
-                          SizedBox(height: 16),
-                          Text('Failed to load prescription image'),
-                        ],
-                      );
-                    },
                   ),
                 ),
               ),

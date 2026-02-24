@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'cloudinary_service.dart';
-import 'gemini_ocr_service.dart';
+import 'groq_ocr_service.dart';
 
 class ApiClient {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,7 +28,7 @@ class ApiClient {
         // Step 2: Process OCR if image file
         if (_isImageFile(file.name) && fileUrl != null) {
           if (kDebugMode) debugPrint('Processing OCR...');
-          ocrData = await GeminiOCRService.extractTextFromImage(fileUrl);
+          ocrData = await GroqOCRService.extractTextFromImage(fileUrl);
         }
       }
       
@@ -100,7 +100,7 @@ class ApiClient {
         
         // Process OCR for new image
         if (_isImageFile(newFile.name) && fileUrl != null) {
-          ocrData = await GeminiOCRService.extractTextFromImage(fileUrl);
+          ocrData = await GroqOCRService.extractTextFromImage(fileUrl);
         }
       }
       
@@ -280,7 +280,7 @@ class ApiClient {
   // OCR processing endpoint
   static Future<Map<String, dynamic>> processOCR(String imageUrl) async {
     try {
-      final ocrData = await GeminiOCRService.extractTextFromImage(imageUrl);
+      final ocrData = await GroqOCRService.extractTextFromImage(imageUrl);
       
       return {
         'success': true,

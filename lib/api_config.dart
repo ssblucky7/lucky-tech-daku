@@ -1,14 +1,21 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConfig {
-  // Replace this with your actual Gemini API key
-  // Get your API key from: https://makersuite.google.com/app/apikey
-  static const String geminiApiKey = 'YOUR_ACTUAL_GEMINI_API_KEY_HERE';
+  // Groq AI key from .env file
+  static String get geminiApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
   
-  // Instructions for getting API key:
-  // 1. Go to https://makersuite.google.com/app/apikey
-  // 2. Sign in with your Google account
-  // 3. Click "Create API Key"
-  // 4. Copy the generated key
-  // 5. Replace the value above with your actual key
+  // Firebase Configuration
+  static String get firebaseProjectId => dotenv.env['FIREBASE_PROJECT_ID'] ?? '';
+  static String get firebaseApiKey => dotenv.env['FIREBASE_WEB_API_KEY'] ?? '';
   
-  static bool get isConfigured => geminiApiKey != 'YOUR_ACTUAL_GEMINI_API_KEY_HERE';
+  // Cloudinary Configuration
+  static String get cloudinaryCloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
+  static String get cloudinaryApiKey => dotenv.env['CLOUDINARY_API_KEY'] ?? '';
+  static String get cloudinaryApiSecret => dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
+  
+  // Check if all APIs are configured
+  static bool get isConfigured => 
+      geminiApiKey.isNotEmpty && 
+      firebaseProjectId.isNotEmpty && 
+      cloudinaryCloudName.isNotEmpty;
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:finalapp/services/gemini_service.dart';
+import 'package:finalapp/services/groq_service.dart';
 import 'package:finalapp/services/speech_service.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
@@ -52,7 +52,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   }
 
   Future<void> _testApiConnection() async {
-    final isWorking = await GeminiService.testConnection();
+    final isWorking = await GroqService.testConnection();
     if (!isWorking && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -97,7 +97,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       setState(() {
         _messages.add({
           'role': 'assistant',
-          'content': GeminiService.getWelcomeMessage(_selectedLanguage),
+          'content': GroqService.getWelcomeMessage(_selectedLanguage),
           'timestamp': DateTime.now().toIso8601String(),
         });
       });
@@ -120,7 +120,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     await _saveChatHistory();
 
     try {
-      final response = await GeminiService.generateResponse(
+      final response = await GroqService.generateResponse(
         message: message,
         language: _selectedLanguage,
         context: _messages.take(_messages.length - 1).toList(),

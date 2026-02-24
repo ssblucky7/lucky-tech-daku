@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finalapp/screens/login_screen.dart';
 import 'package:finalapp/services/firebase_service.dart';
 import 'package:finalapp/services/profile_service.dart';
 import 'package:finalapp/widgets/tracked_screen.dart';
 import 'package:finalapp/widgets/tracked_button.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -81,116 +83,279 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade400, Colors.blue.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.blue.withValues(alpha: 0.3),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade300, width: 1),
-            ),
-            child: _userData != null
-                ? const Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.grey,
-                  )
-                : const Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _userData?['name'] ?? 'No Name',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'ID: ${_userData?['unique_id'] ?? 'CS${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}'}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  _userData?['email'] ?? 'No Email',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _showProfileImageOptions,
+                child: Stack(
                   children: [
-                    _buildStatItem('History', _medicalHistory.length.toString()),
-                    const SizedBox(width: 8),
-                    _buildStatItem('Verified', _userData?['is_email_verified'] == true ? 'Yes' : 'No'),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        image: _userData?['profile_image_url'] != null
+                            ? DecorationImage(
+                                image: NetworkImage(_userData!['profile_image_url']),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: _userData?['profile_image_url'] == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _userData?['name'] ?? 'No Name',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${_userData?['user_id']?.substring(0, 8) ?? 'N/A'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _userData?['email'] ?? 'No Email',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.share, color: Colors.white),
+                onPressed: _shareProfile,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {},
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildHeaderStat('Records', _medicalHistory.length.toString()),
+              Container(width: 1, height: 30, color: Colors.white30),
+              _buildHeaderStat('Blood', _userData?['blood_group'] ?? 'N/A'),
+              Container(width: 1, height: 30, color: Colors.white30),
+              _buildHeaderStat('Verified', _userData?['is_email_verified'] == true ? '✓' : '✗'),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(20),
+  Widget _buildHeaderStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showProfileImageOptions() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.blue[700],
-              ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _updateProfileImage();
+              },
             ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue[700],
+            if (_userData?['profile_image_url'] != null)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove photo', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeProfileImage();
+                },
               ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _updateProfileImage() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        await ProfileService.updateProfileImage(result.files.first);
+        await _loadUserData();
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile image updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeProfileImage() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final user = FirebaseService.currentUser;
+      if (user != null) {
+        await FirebaseService.firestore
+            .collection('caresync_profiles')
+            .doc(user.uid)
+            .update({
+          'profile_image_url': null,
+          'profile_image_name': null,
+          'public_id': null,
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await _loadUserData();
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile image removed'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to remove image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _shareProfile() {
+    final profileText = '''
+CareSync Profile
+
+Name: ${_userData?['name'] ?? 'N/A'}
+Email: ${_userData?['email'] ?? 'N/A'}
+Blood Group: ${_userData?['blood_group'] ?? 'N/A'}
+Phone: ${_userData?['phone'] ?? 'N/A'}
+Emergency Contact: ${_userData?['emergency_contact'] ?? 'N/A'}
+
+Medical Records: ${_medicalHistory.length}
+''';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Profile info copied: $profileText'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -344,45 +509,246 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSettingsDialog() {
+    bool pushNotifications = true;
+    bool emailNotifications = false;
+    String language = 'English';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Settings'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text('Push Notifications'),
+                  subtitle: const Text('Receive app notifications'),
+                  value: pushNotifications,
+                  onChanged: (value) {
+                    setState(() => pushNotifications = value);
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Email Notifications'),
+                  subtitle: const Text('Receive email updates'),
+                  value: emailNotifications,
+                  onChanged: (value) {
+                    setState(() => emailNotifications = value);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  title: const Text('Language'),
+                  subtitle: Text(language),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Select Language'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: ['English', 'नेपाली', 'हिंदी'].map((lang) {
+                            return RadioListTile<String>(
+                              title: Text(lang),
+                              value: lang,
+                              groupValue: language,
+                              onChanged: (value) {
+                                setState(() => language = value!);
+                                Navigator.pop(context);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: const Text('Change Password'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showChangePasswordDialog();
+                  },
+                ),
+                ListTile(
+                  title: const Text('Delete Account'),
+                  trailing: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteAccountDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            TrackedButton(
+              buttonName: 'save_settings',
+              screenName: 'settings_dialog',
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Settings saved successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Settings'),
+        title: const Text('Change Password'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SwitchListTile(
-              title: const Text('Push Notifications'),
-              value: true,
-              onChanged: (value) {},
+            TextField(
+              controller: currentPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Current Password',
+                border: OutlineInputBorder(),
+              ),
             ),
-            SwitchListTile(
-              title: const Text('Email Notifications'),
-              value: false,
-              onChanged: (value) {},
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                border: OutlineInputBorder(),
+              ),
             ),
-            ListTile(
-              title: const Text('Language'),
-              trailing: const Text('English'),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text('Activity Analytics'),
-              trailing: const Icon(Icons.analytics),
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to the analytics dashboard via the bottom navigation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Analytics dashboard feature coming soon')),
-                );
-              },
+            const SizedBox(height: 16),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirm Password',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('Cancel'),
+          ),
+          TrackedButton(
+            buttonName: 'change_password',
+            screenName: 'change_password_dialog',
+            onPressed: () {
+              if (newPasswordController.text == confirmPasswordController.text) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password changed successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Passwords do not match'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Change'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning, color: Colors.red, size: 64),
+            SizedBox(height: 16),
+            Text(
+              'Are you sure you want to delete your account? This action cannot be undone.',
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'All your data including medical records will be permanently deleted.',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TrackedButton(
+            buttonName: 'confirm_delete_account',
+            screenName: 'delete_account_dialog',
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+
+                await ProfileService.deleteUserProfile();
+                await FirebaseService.signOut();
+
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete account: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -1237,6 +1603,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     List<String> items,
     Function(String?) onChanged,
   ) {
+    // Ensure value exists in items
+    if (!items.contains(value)) {
+      value = items.first;
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

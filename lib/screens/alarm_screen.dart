@@ -170,7 +170,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                       }
                     }
                   },
-                  activeColor: Colors.blue,
+                  activeThumbColor: Colors.blue,
                 ),
               ],
             ),

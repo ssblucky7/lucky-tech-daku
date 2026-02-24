@@ -39,9 +39,11 @@ CareSync is a comprehensive healthcare management application built with Flutter
 ### 🏥 Healthcare Services
 - **Hospital Directory**: Find nearby healthcare facilities
 - **Doctor Consultation**: Virtual consultation platform
-- **AI Health Assistant**: Gemini AI-powered health chatbot
+- **AI Health Assistant**: Groq AI-powered health chatbot
 - **OCR Document Processing**: Extract data from medical documents
 - **Report Generation**: Automated health report creation
+- **Quick Actions**: Upload files, scan documents, generate QR codes, share profiles
+- **File Preview System**: Responsive preview for images, PDFs, and documents
 
 ### 📊 Analytics & Insights
 - **Health Analytics**: Personal health insights and trends
@@ -69,16 +71,19 @@ lib/
 │   ├── appointments/            # Appointment management
 │   ├── health/                  # Health tracking
 │   └── admin/                   # Admin panel
-├── services/                    # Business logic (20+ services)
+├── services/                    # Business logic (28+ services)
 │   ├── firebase_service.dart    # Firebase integration
 │   ├── auth_service.dart        # Authentication
 │   ├── notification_service.dart # Notifications
 │   ├── appointment_service.dart  # Appointments
-│   ├── gemini_service.dart      # AI integration
-│   └── cloudinary_service.dart  # File storage
+│   ├── groq_service.dart        # AI integration
+│   ├── groq_ocr_service.dart    # OCR processing
+│   ├── cloudinary_service.dart  # File storage
+│   └── quick_actions_service.dart # Quick actions
 ├── widgets/                     # Reusable components
 │   ├── custom_bottom_navbar.dart
 │   ├── tracked_button.dart
+│   ├── file_preview.dart        # File preview system
 │   └── responsive_layout.dart
 └── utils/                       # Utility functions
     └── platform_helper.dart
@@ -89,7 +94,8 @@ lib/
 - **Firebase Authentication**: User management
 - **Firebase Storage**: File storage
 - **Cloudinary**: Media management and optimization
-- **Gemini AI**: Natural language processing and OCR
+- **Groq AI**: Natural language processing and OCR
+- **Cached Network Images**: Image caching and optimization
 
 ### Cross-Platform Support
 - ✅ **Android**: Native Android support
@@ -135,9 +141,12 @@ lib/
    CLOUDINARY_CLOUD_NAME=your-cloud-name
    CLOUDINARY_API_KEY=your-api-key
    CLOUDINARY_API_SECRET=your-api-secret
+   CLOUDINARY_UPLOAD_PRESET=patient_upload
+   CLOUDINARY_FOLDER=finalapp/patients
    
-   # Gemini AI Configuration
-   GEMINI_API_KEY=your-gemini-api-key
+   # Groq AI Configuration
+   GROQ_API_KEY=your-groq-api-key
+   GROQ_MODEL=llama-3.3-70b-versatile
    ```
 
 4. **Firebase Setup**
@@ -176,11 +185,13 @@ lib/
 
 ### Feature Screens
 - **Appointment Management**: Create, view, and manage appointments
-- **Medication Tracker**: Set reminders and track medication
+- **Medication Tracker**: Set reminders and track medication with prescription previews
 - **Family Records**: Manage family member health data
 - **Reports**: Generate and view health reports
 - **Notifications**: Message center and alerts
 - **Admin Panel**: System administration (admin users)
+- **Quick Actions**: Upload files, scan documents, generate QR codes, share profiles
+- **File Preview**: View images, PDFs, and documents with zoom and full-screen support
 
 ## 🔧 Configuration
 
@@ -196,10 +207,12 @@ lib/
 1. Create account at [Cloudinary](https://cloudinary.com)
 2. Get API credentials from dashboard
 3. Configure upload presets for file handling
+4. Set folder structure for organized storage
 
-### Gemini AI Integration
-1. Get API key from [Google AI Studio](https://makersuite.google.com)
+### Groq AI Integration
+1. Get API key from [Groq Console](https://console.groq.com)
 2. Configure for OCR and chatbot features
+3. Select appropriate model (llama-3.3-70b-versatile recommended)
 
 ## 🧪 Testing
 
@@ -232,8 +245,16 @@ flutter run
 - Flutter team for the amazing framework
 - Firebase for backend services
 - Cloudinary for media management
-- Google AI for Gemini integration
+- Groq AI for language model integration
 - Open source community for various packages
+
+## 📚 Additional Documentation
+
+- [Quick Actions Fix Guide](QUICK_ACTIONS_FIX.md) - Quick actions troubleshooting
+- [Testing Guide](TESTING_GUIDE.md) - Feature testing instructions
+- [File Preview System](FILE_PREVIEW_SYSTEM.md) - File preview documentation
+- [File Preview Quick Reference](FILE_PREVIEW_QUICK_REF.md) - Quick reference guide
+- [Implementation Summary](FILE_PREVIEW_IMPLEMENTATION.md) - Implementation details
 
 ## Try Android APK APP
 Download Link: <a href='https://drive.google.com/file/d/1oDJfwLC75VKHZJBbTPPKSnp_DnnfJfH-/view?usp=sharing'> CareSync </a>

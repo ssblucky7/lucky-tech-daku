@@ -289,7 +289,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               labelText: 'Filter by User',
               border: OutlineInputBorder(),
             ),
-            value: _selectedUser,
+            initialValue: _selectedUser,
             items: [
               const DropdownMenuItem<String?>(
                 value: null,
@@ -559,7 +559,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 labelText: 'Delete data older than',
                 border: OutlineInputBorder(),
               ),
-              value: 30,
+              initialValue: 30,
               items: [
                 const DropdownMenuItem<int>(value: 7, child: Text('7 days')),
                 const DropdownMenuItem<int>(value: 30, child: Text('30 days')),

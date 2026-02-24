@@ -615,7 +615,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> wit
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: reportType,
+                    initialValue: reportType,
                     decoration: const InputDecoration(
                       labelText: 'Report Type',
                       border: OutlineInputBorder(),

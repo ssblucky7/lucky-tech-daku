@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 
 import 'package:finalapp/services/firebase_service.dart';
 import 'package:finalapp/services/cloudinary_service.dart';
@@ -8,6 +9,9 @@ import 'package:finalapp/services/media_storage_service.dart';
 import 'package:finalapp/services/activity_tracking_service.dart';
 import 'package:finalapp/services/database_init_service.dart';
 import 'package:finalapp/services/data_sync_service.dart';
+import 'package:finalapp/services/api_verification_service.dart';
+import 'package:finalapp/providers/profile_provider.dart';
+import 'package:finalapp/modules/session_module.dart';
 import 'package:finalapp/utils/platform_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +23,12 @@ void main() async {
   
   // Load environment variables
   await dotenv.load(fileName: '.env');
+  
+  // Verify API configuration
+  if (kDebugMode) {
+    debugPrint('=== CareSync Startup ===');
+    debugPrint(ApiVerificationService.getConfigurationStatus());
+  }
   
   // Initialize Firebase first
   await Firebase.initializeApp(
@@ -36,6 +46,11 @@ void main() async {
     
     // Check connectivity and sync offline data
     await DataSyncService.checkConnectivity();
+    
+    // Verify all APIs
+    if (kDebugMode) {
+      await ApiVerificationService.verifyAllApis();
+    }
   } catch (e) {
     if (kDebugMode) debugPrint('Service initialization error: $e');
     // Continue app startup even if some services fail
@@ -43,6 +58,8 @@ void main() async {
   
   // Log app startup
   if (FirebaseService.isUserLoggedIn()) {
+    await SessionModule.initializeSession();
+    
     await ActivityTrackingService.trackActivity(
       activityType: ActivityTrackingService.appStart,
       description: 'Application started',
@@ -88,64 +105,67 @@ class CareSync extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CareSync',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.grey[100],
-        visualDensity: PlatformHelper.isDesktop 
-            ? VisualDensity.comfortable 
-            : VisualDensity.compact,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.black),
-          titleTextStyle: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+    return ChangeNotifierProvider(
+      create: (_) => ProfileProvider()..startListening(),
+      child: MaterialApp(
+        title: 'CareSync',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          scaffoldBackgroundColor: Colors.grey[100],
+          visualDensity: PlatformHelper.isDesktop 
+              ? VisualDensity.comfortable 
+              : VisualDensity.compact,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            iconTheme: IconThemeData(color: Colors.black),
+            titleTextStyle: TextStyle(
+              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          elevation: 8,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            backgroundColor: Colors.white,
+            elevation: 8,
+            selectedItemColor: Colors.blue,
+            unselectedItemColor: Colors.grey,
+            type: BottomNavigationBarType.fixed,
           ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: PlatformHelper.isDesktop ? 16 : 12,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
+          cardTheme: CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.symmetric(
-              horizontal: PlatformHelper.isDesktop ? 32 : 24,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16,
               vertical: PlatformHelper.isDesktop ? 16 : 12,
             ),
           ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: PlatformHelper.isDesktop ? 32 : 24,
+                vertical: PlatformHelper.isDesktop ? 16 : 12,
+              ),
+            ),
+          ),
         ),
+        home: const AuthWrapper(),
       ),
-      home: const AuthWrapper(),
     );
   }
 }

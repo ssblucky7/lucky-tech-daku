@@ -30,46 +30,46 @@ class DefaultFirebaseOptions {
   }
 
   static FirebaseOptions get web => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? 'AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc',
-    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867'}:web:finalapp',
-    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867',
-    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'school-app-dfaea',
-    authDomain: dotenv.env['FIREBASE_AUTH_DOMAIN'] ?? 'school-app-dfaea.firebaseapp.com',
-    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'school-app-dfaea.appspot.com',
+    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? '',
+    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? ''}:web:finalapp',
+    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+    authDomain: dotenv.env['FIREBASE_AUTH_DOMAIN'] ?? '',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
   );
 
   static FirebaseOptions get android => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? 'AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc',
-    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867'}:android:finalapp',
-    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867',
-    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'school-app-dfaea',
-    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'school-app-dfaea.appspot.com',
+    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? '',
+    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? ''}:android:finalapp',
+    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
   );
 
   static FirebaseOptions get ios => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? 'AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc',
-    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867'}:ios:finalapp',
-    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867',
-    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'school-app-dfaea',
-    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'school-app-dfaea.appspot.com',
-    iosBundleId: 'com.example.finalapp',
+    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? '',
+    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? ''}:ios:finalapp',
+    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
+    iosBundleId: 'ssb.caresync.com',
   );
 
   static FirebaseOptions get macos => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? 'AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc',
-    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867'}:macos:finalapp',
-    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867',
-    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'school-app-dfaea',
-    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'school-app-dfaea.appspot.com',
-    iosBundleId: 'com.example.finalapp',
+    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? '',
+    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? ''}:macos:finalapp',
+    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
+    iosBundleId: 'ssb.caresync.com',
   );
 
   static FirebaseOptions get windows => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? 'AIzaSyCC9QbhAD8epAectQ8XIuoAhcwnPF3IHqc',
-    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867'}:web:finalapp',
-    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '1012131031867',
-    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'school-app-dfaea',
-    authDomain: dotenv.env['FIREBASE_AUTH_DOMAIN'] ?? 'school-app-dfaea.firebaseapp.com',
-    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'school-app-dfaea.appspot.com',
+    apiKey: dotenv.env['FIREBASE_WEB_API_KEY'] ?? '',
+    appId: '1:${dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? ''}:web:finalapp',
+    messagingSenderId: dotenv.env['FIREBASE_PROJECT_NUMBER'] ?? '',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+    authDomain: dotenv.env['FIREBASE_AUTH_DOMAIN'] ?? '',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
   );
 }
